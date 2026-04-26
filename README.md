@@ -14,13 +14,13 @@ Runs **entirely locally via [Ollama](https://ollama.com/)** — no API keys, no 
 | 2 | Ollama LLM provider, model picker | ✅ Complete (6 tests) |
 | 3 | Campaign loading, parsing, and selection | ✅ Complete (52 tests) |
 | 4 | Rules system — loader, reference, NarrativeState | ✅ Complete (25 tests) |
-| 5 | Memory graph — Graphiti + Kuzu | 🔲 Not started |
+| 5 | Memory graph — Graphiti + Kuzu | ✅ Complete (8 tests) |
 | 6 | DM agent — context builder, spoiler guard | 🔲 Not started |
 | 7 | Dice engine | 🔲 Not started |
 | 8 | CLI text interface and main loop | 🔲 Not started |
 | 9+ | Polish, voice, multi-character, OpenAI, etc. | 🔲 Not started |
 
-**83 tests passing** across Phases 1–4.
+**91 tests passing** across Phases 1–5.
 
 ---
 

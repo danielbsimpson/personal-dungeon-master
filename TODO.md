@@ -135,43 +135,43 @@ Build the memory system using [Graphiti](https://github.com/getzep/graphiti) —
 
 ### Tasks
 
-- [ ] Add `graphiti-core[kuzu]` to `requirements.txt` and `pyproject.toml` (replaces `networkx`)
-- [ ] `src/dm/memory/graphiti_store.py`
-  - [ ] `GraphitiStore` class wrapping a `Graphiti` instance configured with `KuzuDriver`
-    - [ ] `__init__(db_path: Path, llm_client, embedder)` — create `KuzuDriver(db=str(db_path))`, instantiate `Graphiti(graph_driver=driver, llm_client=llm_client, embedder=embedder)`
-    - [ ] `async setup()` — call `graphiti.build_indices_and_constraints()` once on first run
-    - [ ] `async add_episode(name: str, content: str, source_description: str, turn: int, group_id: str)` — thin wrapper around `graphiti.add_episode(...)` with `reference_time=datetime.now()`
-    - [ ] `async search(query: str, group_id: str, num_results: int = 10) -> str` — call `graphiti.search(query, group_ids=[group_id], num_results=num_results)`, format results as a structured text block for the system prompt
-    - [ ] `async close()` — call `graphiti.close()`
-- [ ] `src/dm/memory/graphiti_factory.py`
-  - [ ] `build_graphiti_clients(settings) -> tuple[llm_client, embedder]` — constructs `OpenAIGenericClient` and `OpenAIEmbedder` both pointed at `{OLLAMA_BASE_URL}/v1` with `api_key="ollama"`, using `settings.dm_model` and a configured embedding model (default `nomic-embed-text`)
-  - [ ] Pulls embedding model name from a new `EMBEDDING_MODEL` setting (default `nomic-embed-text`, dim `768`)
-- [ ] `src/dm/memory/session_store.py`
-  - [ ] `SessionStore` class scoped to a campaign path
-  - [ ] `load()` — read `session.json` from disk on startup; return empty list if absent
-  - [ ] `append(role: str, content: str)` — add message and persist; trim to the last N messages (default 20, configurable via `SESSION_WINDOW` setting)
-  - [ ] `messages() -> list[dict]` — return the current window as `[{role, content}, ...]`
-  - [ ] `clear()` — wipe the session window (graph is preserved)
-- [ ] `src/dm/memory/manager.py`
-  - [ ] `MemoryManager` class — composes `GraphitiStore`, `SessionStore`, and progress pointer
-  - [ ] `async load(campaign_name: str)` — set up `GraphitiStore` (run `setup()` if first use), load session and progress from disk
-  - [ ] `async record_turn(player_input: str, dm_response: str, turn: int)` — append both messages to `SessionStore`; ingest `dm_response` as a Graphiti episode
-  - [ ] `async get_context(current_text: str, group_id: str) -> str` — call `GraphitiStore.search(current_text, group_id)` and return the formatted block for injection into the system prompt
-  - [ ] `advance_progress(to_section: int)` — update and persist the scene pointer (monotonically increasing)
-  - [ ] `campaign_progress` property — current section index
-  - [ ] `reset_session()` — wipe session window only; graph is preserved
-  - [ ] `full_reset()` — wipe session window; drop and recreate the Kuzu DB directory
-- [ ] Add to `src/config.py` and `.env.example`:
-  - [ ] `SESSION_WINDOW` (default `20`) — short-term message window size
-  - [ ] `EMBEDDING_MODEL` (default `nomic-embed-text`) — Ollama embedding model for Graphiti
-  - [ ] `GRAPHITI_TELEMETRY_ENABLED=false` — disable anonymous telemetry in `.env.example`
-- [ ] Write unit tests in `tests/test_memory.py`
-  - [ ] Test `SessionStore` trims to the configured window size
-  - [ ] Test `SessionStore` persists and reloads correctly across instances
-  - [ ] Test `SessionStore.clear()` empties the window without touching graph files
-  - [ ] Test `MemoryManager.advance_progress` is monotonically increasing (cannot go backwards)
-  - [ ] Mock `GraphitiStore` and test `MemoryManager.record_turn` calls `add_episode` and `SessionStore.append` correctly
-  - [ ] Mock `GraphitiStore` and test `MemoryManager.get_context` returns the formatted search result string
+- [x] Add `graphiti-core[kuzu]` to `requirements.txt` and `pyproject.toml` (replaces `networkx`)
+- [x] `src/dm/memory/graphiti_store.py`
+  - [x] `GraphitiStore` class wrapping a `Graphiti` instance configured with `KuzuDriver`
+    - [x] `__init__(db_path: Path, llm_client, embedder)` — create `KuzuDriver(db=str(db_path))`, instantiate `Graphiti(graph_driver=driver, llm_client=llm_client, embedder=embedder)`
+    - [x] `async setup()` — call `graphiti.build_indices_and_constraints()` once on first run
+    - [x] `async add_episode(name: str, content: str, source_description: str, turn: int, group_id: str)` — thin wrapper around `graphiti.add_episode(...)` with `reference_time=datetime.now()`
+    - [x] `async search(query: str, group_id: str, num_results: int = 10) -> str` — call `graphiti.search(query, group_ids=[group_id], num_results=num_results)`, format results as a structured text block for the system prompt
+    - [x] `async close()` — call `graphiti.close()`
+- [x] `src/dm/memory/graphiti_factory.py`
+  - [x] `build_graphiti_clients(settings) -> tuple[llm_client, embedder]` — constructs `OpenAIGenericClient` and `OpenAIEmbedder` both pointed at `{OLLAMA_BASE_URL}/v1` with `api_key="ollama"`, using `settings.dm_model` and a configured embedding model (default `nomic-embed-text`)
+  - [x] Pulls embedding model name from a new `EMBEDDING_MODEL` setting (default `nomic-embed-text`, dim `768`)
+- [x] `src/dm/memory/session_store.py`
+  - [x] `SessionStore` class scoped to a campaign path
+  - [x] `load()` — read `session.json` from disk on startup; return empty list if absent
+  - [x] `append(role: str, content: str)` — add message and persist; trim to the last N messages (default 20, configurable via `SESSION_WINDOW` setting)
+  - [x] `messages() -> list[dict]` — return the current window as `[{role, content}, ...]`
+  - [x] `clear()` — wipe the session window (graph is preserved)
+- [x] `src/dm/memory/manager.py`
+  - [x] `MemoryManager` class — composes `GraphitiStore`, `SessionStore`, and progress pointer
+  - [x] `async load(campaign_name: str)` — set up `GraphitiStore` (run `setup()` if first use), load session and progress from disk
+  - [x] `async record_turn(player_input: str, dm_response: str, turn: int)` — append both messages to `SessionStore`; ingest `dm_response` as a Graphiti episode
+  - [x] `async get_context(current_text: str, group_id: str) -> str` — call `GraphitiStore.search(current_text, group_id)` and return the formatted block for injection into the system prompt
+  - [x] `advance_progress(to_section: int)` — update and persist the scene pointer (monotonically increasing)
+  - [x] `campaign_progress` property — current section index
+  - [x] `reset_session()` — wipe session window only; graph is preserved
+  - [x] `full_reset()` — wipe session window; drop and recreate the Kuzu DB directory
+- [x] Add to `src/config.py` and `.env.example`:
+  - [x] `SESSION_WINDOW` (default `20`) — short-term message window size
+  - [x] `EMBEDDING_MODEL` (default `nomic-embed-text`) — Ollama embedding model for Graphiti
+  - [x] `GRAPHITI_TELEMETRY_ENABLED=false` — disable anonymous telemetry in `.env.example`
+- [x] Write unit tests in `tests/test_memory.py`
+  - [x] Test `SessionStore` trims to the configured window size
+  - [x] Test `SessionStore` persists and reloads correctly across instances
+  - [x] Test `SessionStore.clear()` empties the window without touching graph files
+  - [x] Test `MemoryManager.advance_progress` is monotonically increasing (cannot go backwards)
+  - [x] Mock `GraphitiStore` and test `MemoryManager.record_turn` calls `add_episode` and `SessionStore.append` correctly
+  - [x] Mock `GraphitiStore` and test `MemoryManager.get_context` returns the formatted search result string
 
 ---
 
