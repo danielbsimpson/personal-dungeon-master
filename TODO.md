@@ -69,24 +69,24 @@ Build the provider layer for local inference via Ollama. The entire system runs 
 
 Build the layer that reads campaign folders and turns them into structured data the DM can use.
 
-- [ ] `src/campaign/loader.py`
-  - [ ] Scan `CAMPAIGNS_DIR` for valid campaign folders (must contain all four required files)
-  - [ ] Return a list of `Campaign` metadata objects (name, path, file paths)
-  - [ ] Raise a clear error if a required file is missing or the directory is empty
-- [ ] `src/campaign/parser.py`
-  - [ ] Parse `README.md` → campaign summary string
-  - [ ] Parse `character.md` → structured `Character` Pydantic model (name, stats, class, inventory, etc.)
-  - [ ] Parse `creature.md` → list of `Creature` Pydantic models (name, stats, abilities, flavor)
-  - [ ] Read `[campaign_name].txt` → raw campaign book text, split into logical sections or scenes
-  - [ ] Define a `ParsedCampaign` dataclass/model that holds all four parsed components
-- [ ] `src/campaign/selector.py`
-  - [ ] Display a numbered list of available campaigns using `rich`
-  - [ ] Accept user input and return the selected `Campaign`
-  - [ ] Handle invalid input gracefully (re-prompt)
-- [ ] Write unit tests in `tests/test_loader.py` and `tests/test_parser.py`
-  - [ ] Test that valid campaigns load correctly
-  - [ ] Test that missing files raise the appropriate errors
-  - [ ] Test that the example campaign parses without errors
+- [x] `src/campaign/loader.py`
+  - [x] Scan `CAMPAIGNS_DIR` for valid campaign folders (must contain all four required files)
+  - [x] Return a list of `Campaign` metadata objects (name, path, file paths)
+  - [x] Raise a clear error if a required file is missing or the directory is empty
+- [x] `src/campaign/parser.py`
+  - [x] Parse `README.md` → campaign summary string
+  - [x] Parse `character.md` → structured `Character` Pydantic model (name, stats, class, inventory, etc.)
+  - [x] Parse `creature.md` → list of `Creature` Pydantic models (name, stats, abilities, flavor)
+  - [x] Read `[campaign_name].txt` → raw campaign book text, split into logical sections or scenes
+  - [x] Define a `ParsedCampaign` dataclass/model that holds all four parsed components
+- [x] `src/campaign/selector.py`
+  - [x] Display a numbered list of available campaigns using `rich`
+  - [x] Accept user input and return the selected `Campaign`
+  - [x] Handle invalid input gracefully (re-prompt)
+- [x] Write unit tests in `tests/test_loader.py` and `tests/test_parser.py`
+  - [x] Test that valid campaigns load correctly
+  - [x] Test that missing files raise the appropriate errors
+  - [x] Test that the example campaign parses without errors
 
 ---
 
