@@ -1,0 +1,63 @@
+## SCENE 1 — Arrival in Millhaven
+
+The road into Millhaven follows the River Sorn for the last mile, and the river is high. It has been raining for a week — steady, grey, unhurried rain that has turned the fields on either bank into shallow lakes and left the town itself smelling of wet wood and river mud.
+
+Millhaven sits on a shallow bluff above the worst of the flooding, but only just. The old mill at the south end of town — the one that stopped turning forty years ago when its millstone cracked — is partially submerged. The lower half of its stone foundation disappears into brown water. Someone has wedged a rowboat against its doorframe with a rope tied around a bollard.
+
+The main road leads to a small market square. Three stalls are operating despite the weather: a woman selling dried fish under a canvas awning, an old man with a cart of turnips, and a boy with an umbrella too large for him selling hot cider from a clay jug. The sign above the only inn reads **The Silver Sorn**. Smoke comes from its chimney. It is the most welcoming thing in town.
+
+**Key location:** The Silver Sorn inn. Bram Kettler, a merchant from Dawnmere, is waiting here. He has a proposition.
+
+**What the player knows:** A rumour reached them in the last town — a drowned wizard's vault under the old Millhaven mill, flooded forty years ago, never fully excavated. Whatever is inside was never retrieved.
+
+---
+
+**At the inn:** Bram Kettler is a round-faced man in his late forties with expensive boots and the air of someone who has spent his whole career being underestimated. He is a legitimate merchant. He is also, right now, trying to do something that Millhaven's locals would strenuously object to if they knew what he was paying for.
+
+He introduces himself readily and comes to the point quickly. He has, through considerable research, determined that Mira Coldstone — the wizard who owned and flooded the vault forty years ago — died without heirs and without publicly cataloguing its contents. He believes there are spell formulae inside. He wants them. He will pay 50 gold pieces for entry, retrieval of whatever written materials can be found, and proof that the vault has been properly accessed. He does not mention that he has already approached two other potential contractors who turned him down.
+
+**Bram's tells:** A DC 13 Insight check reveals that he is leaving something out — not lying, exactly, but performing a truncated version of the truth. He will admit, if pressed, that Millhaven's locals believe the vault should stay sealed. He frames this as superstition. A DC 15 Persuasion check or a direct accusation gets him to admit that the previous mill owner — whose family still lives in town — has made clear that anyone going into that vault will not be welcome in Millhaven again. He says this as if it is a minor inconvenience.
+
+**The town's perspective:** Anyone the player asks — the innkeeper, the fish-seller, the boy with the cider — will give a version of the same answer. The vault is Mira's vault. She put it underwater on purpose. That was her choice to make, and everyone in town has respected it for forty years, and there is no reason to stop now. They are not hostile about this. They are simply clear.
+
+---
+
+## SCENE 2 — The Old Mill and the Vault Below
+
+The mill's interior still smells like grain despite four decades of disuse. The lower floor is ankle-deep in water — cold, brown, river-fed, with a steady current finding its way in through cracks in the old stone. The millstone sits in the middle of the floor, cracked clean through on one side, leaning at an angle.
+
+The trapdoor is in the floor behind the millstone. It is iron, fitted with a large lock that has been underwater for years. The lock is still functional — Mira built it to be. A DC 14 Thieves' Tools check opens it. Alternatively, a successful DC 14 Arcana check identifies the lock's faint residual enchantment and suggests that an *Unlock* spell or equivalent would work.
+
+Below the trapdoor: a stone staircase descending into dark water.
+
+**Into the water:** The staircase goes down twelve feet before the archival chamber becomes accessible. The water is chest-deep on a Medium creature at the base of the stairs. The chamber itself is flooded to about four feet — navigable by wading, but slow. Torben can manage the stairs and chamber without swimming checks; anything requiring rapid movement or combat in deep water would require Athletics checks (DC 12).
+
+**The archival chamber:** This was Mira's working library. Shelves line three walls from floor to ceiling, most of the lower shelves long since destroyed by water. The upper shelves — accessible via a narrow iron walkway bolted to the walls at eight feet — are still intact. Books remain on the upper shelves: waterproofed, sealed in wax-cloth, still legible. Most are reference texts — history of the Sorn basin, annotated survey maps, a treatise on water magic. Mira's personal research journals are not here.
+
+On the central reading table — partially submerged, but its surface still visible — a Vault Ooze has taken up residence. It is not threatening Torben directly. It is simply there, feeding on the waterlogged remains of a stack of loose parchment that was once stacked on the table.
+
+**Past the archival chamber:** A narrow stone corridor connects to the inner vault. The door at the end is iron, sealed with a different mechanism than the trapdoor above — this one is clearly magical. The Warden is visible through the door's iron grille, standing motionless in the room beyond, facing the door. It is waiting.
+
+---
+
+## SCENE 3 — The Inner Vault and What Mira Left
+
+**The sealed door:** The door to the inner vault cannot be picked or forced. It requires a command phrase — Mira's name, spoken clearly, followed by the phrase *"I have come to understand, not to take."* This is not hidden. It is carved in small, neat letters above the door's lock mechanism. The Warden does not react to a creature saying Mira's name incorrectly or to failed attempts. It simply waits. If the phrase is spoken correctly, the door unlocks from the inside.
+
+**The Warden's response:** When the door opens, the Warden does not attack immediately. It observes. If the player moves toward the three red-wax canisters sealed on the central shelf, the Warden interposes itself. If the player reaches for the canisters or the sealed interior door, the Warden attacks. Otherwise, it watches.
+
+The player can read everything else in the room freely. The Warden allows this. It is not guarding knowledge. It is guarding three specific objects.
+
+**What is in the inner vault:**
+
+Mira's research journals (six volumes) are on the left shelf. They are readable. They tell the complete story: Mira Coldstone was a Divination specialist who spent thirty years mapping every major magical source in the Sorn basin. Late in her life, she discovered something beneath the riverbed — a slow, vast, poorly understood accumulation of wild magic that the river had been absorbing from a pre-Collapse artifact for possibly centuries. She called it the Deep Current.
+
+The Deep Current, if properly tapped, would be extraordinarily powerful. The problem — documented in exhaustive, increasingly alarmed detail across the last three volumes — is that the process of tapping it would also destabilize it. Mira calculated that an uncontrolled destabilization of the Deep Current would devastate the entire Sorn basin. She estimated "devastation" conservatively at "everything within sixty miles."
+
+The three red-wax canisters contain Mira's complete methodology for tapping the Deep Current. She did not destroy them — she was a scholar and she could not bring herself to destroy her own work. But she sealed them here, flooded the vault, and trusted that the Warden would keep them out of the hands of anyone who arrived thinking they could manage the risk better than she had.
+
+**The choice:** The player can leave the canisters sealed. The Warden allows them to take anything else — books, journals, the reference maps. If the player tries to take the canisters, the Warden fights. If the player attempts to open the canisters in the vault, the Warden fights. If the player reads the journals and chooses to leave the canisters, the Warden does something it has not done in forty years: it steps aside and gestures toward the exit. The door opens from the inside.
+
+**Bram Kettler, if told the truth:** Bram is genuinely unsettled by what Torben describes. He is greedy but not suicidal. If shown the journals — which the Warden permits to leave — he goes quiet for a long time and then says he needs to think. He does not ask again about the canisters. He pays the 50 gold as agreed. Whether Torben believes him is a different question.
+
+**What the town knows:** The innkeeper, if Torben tells her what he found, says only: *"Mira was a careful woman. I always thought the flooding was careful, too."* She does not seem surprised.

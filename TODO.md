@@ -8,63 +8,58 @@ A phased development plan for building the Personal Dungeon Master system. Tasks
 
 Get the repository structure, tooling, and configuration in place before writing any logic.
 
-- [ ] Initialize Python project with `pyproject.toml` (package name, version, Python version constraint)
-- [ ] Create `requirements.txt` with initial dependencies:
+- [x] Initialize Python project with `pyproject.toml` (package name, version, Python version constraint)
+- [x] Create `requirements.txt` with initial dependencies:
   - `openai` (OpenAI API client — also used for the Ollama OpenAI-compatible endpoint)
   - `httpx` (direct HTTP calls to Ollama REST API where needed)
   - `python-dotenv` (environment variable loading)
   - `rich` (terminal formatting and styling)
   - `typer` (CLI argument parsing)
   - `pydantic` (data validation for campaign file parsing)
-- [ ] Create `.env.example` with all required environment variables:
+- [x] Create `.env.example` with all required environment variables:
   - `LLM_PROVIDER` (`openai` or `ollama`)
   - `OPENAI_API_KEY` (required when `LLM_PROVIDER=openai`)
   - `OLLAMA_BASE_URL` (default `http://localhost:11434`, required when `LLM_PROVIDER=ollama`)
   - `DM_MODEL` (e.g., `gpt-4o` for OpenAI, `llama3` for Ollama)
   - `GAME_EDITION` (default `5e`; controls which rules folder is loaded)
   - `CAMPAIGNS_DIR`, `MEMORY_DIR`, `RULES_DIR`
-- [ ] Add `.gitignore` (exclude `.env`, `__pycache__`, `.venv`, `memory/`, `*.pyc`)
-- [ ] Create `src/` directory with `__init__.py` files for each subpackage
-- [ ] Create placeholder `tests/` directory with a `conftest.py` and stub test files:
+- [x] Add `.gitignore` (exclude `.env`, `__pycache__`, `.venv`, `memory/`, `*.pyc`)
+- [x] Create `src/` directory with `__init__.py` files for each subpackage
+- [x] Create placeholder `tests/` directory with a `conftest.py` and stub test files:
   - `test_llm.py`, `test_loader.py`, `test_parser.py`, `test_memory.py`, `test_rules.py`, `test_dice.py`, `test_dm.py`
-- [ ] Create the `campaigns/` directory with an `example-campaign/` folder containing sample files:
+- [x] Create the `campaigns/` directory with an `example-campaign/` folder containing sample files:
   - `README.md` (short sample campaign summary)
   - `character.md` (sample character sheet)
   - `creature.md` (2–3 sample creature entries)
   - `example-campaign.txt` (short sample campaign narrative — 3–5 scenes)
-- [ ] Create the `rules/5e/` directory with initial rule files sourced from the D&D 5e SRD (CC-BY-4.0):
+- [x] Create the `rules/5e/` directory with initial rule files sourced from the D&D 5e SRD (CC-BY-4.0):
   - `core.md` (ability scores, proficiency, skills, checks, saving throws, advantage/disadvantage)
   - `combat.md` (initiative, action economy, attack rolls, damage, critical hits, death saves)
   - `conditions.md` (all 15 condition definitions)
   - `spellcasting.md` (spell slots, concentration, ritual casting, spell attack rolls, save DCs)
   - `equipment.md` (weapon properties, armor categories, encumbrance)
-- [ ] Create `src/config.py` — load all `.env` values, define default paths, expose a `Settings` object; validate that the chosen provider's required fields are present on startup; include `GAME_EDITION` (default `5e`) and `RULES_DIR`
+- [x] Create `src/config.py` — load all `.env` values, define default paths, expose a `Settings` object; validate that the chosen provider's required fields are present on startup; include `GAME_EDITION` (default `5e`) and `RULES_DIR`
 
 ---
 
-## Phase 2 — LLM Provider Abstraction
+## Phase 2 — Ollama LLM Provider
 
-Build a clean provider layer so the DM agent is completely decoupled from the underlying model backend.
+Build the provider layer for local inference via Ollama. The entire system runs locally before any external API is introduced. OpenAI support is added later in Phase 13.
 
 - [ ] `src/llm/base.py`
   - [ ] Define abstract `LLMProvider` base class with a single required method: `complete(messages: list[dict], **kwargs) -> str`
   - [ ] Define a `ModelInfo` dataclass (`name`, `context_window`, `provider`)
-- [ ] `src/llm/openai_provider.py`
-  - [ ] Implement `OpenAIProvider(LLMProvider)` using the `openai` Python SDK
-  - [ ] Read `OPENAI_API_KEY` and `DM_MODEL` from settings
-  - [ ] Pass `temperature`, `max_tokens` from settings
-  - [ ] Implement retry with exponential backoff for rate limit and transient API errors
 - [ ] `src/llm/ollama_provider.py`
   - [ ] Implement `OllamaProvider(LLMProvider)` using the OpenAI-compatible Ollama endpoint (`{OLLAMA_BASE_URL}/v1/chat/completions`) via the `openai` SDK with a custom `base_url`
   - [ ] Implement `list_models() -> list[ModelInfo]` — calls `GET {OLLAMA_BASE_URL}/api/tags` and returns available local models
   - [ ] Check that the Ollama service is reachable at startup; print a helpful error if not
   - [ ] Respect the context window reported by `ollama show <model>` (query at startup and store in settings)
 - [ ] `src/llm/factory.py`
-  - [ ] `create_provider(settings: Settings) -> LLMProvider` — read `LLM_PROVIDER` and return the correct implementation
-  - [ ] If `LLM_PROVIDER=ollama` and `DM_MODEL` is not set, call `list_models()` and present an interactive selection menu using `rich`
+  - [ ] `create_provider(settings: Settings) -> LLMProvider` — read `LLM_PROVIDER` and return the correct implementation; raise a clear not-yet-supported error if the provider is anything other than `ollama`
+  - [ ] If `DM_MODEL` is not set, call `list_models()` and present an interactive selection menu using `rich`
 - [ ] Write unit tests in `tests/test_llm.py`
-  - [ ] Test that `factory.create_provider` returns the correct type based on settings
-  - [ ] Mock the OpenAI SDK and test `OpenAIProvider.complete` formats messages correctly
+  - [ ] Test that `factory.create_provider` returns `OllamaProvider` when `LLM_PROVIDER=ollama`
+  - [ ] Test that an unsupported provider value raises a clear, user-friendly error
   - [ ] Mock the HTTP response and test `OllamaProvider.list_models` parses the tags response correctly
   - [ ] Test that a missing Ollama service raises a clear, user-friendly error
 
@@ -238,7 +233,7 @@ Wire everything together into a working text-based adventure session.
   - [ ] Handle `KeyboardInterrupt` (Ctrl+C) gracefully — save and exit
 - [ ] `src/main.py`
   - [ ] Entry point: load config, run campaign selector, load rules for configured edition, initialize LLM provider via factory, initialize `DungeonMaster`, start chat loop
-  - [ ] If `LLM_PROVIDER=ollama`, verify Ollama is running; if `DM_MODEL` is not set, show model picker
+  - [ ] Verify Ollama is running at startup; if `DM_MODEL` is not set, show model picker
   - [ ] Check that all required environment variables are set before proceeding
   - [ ] Print a helpful error message if the `campaigns/` directory is empty or missing
   - [ ] Print a helpful error message if the `rules/<edition>/` directory is missing
@@ -259,7 +254,7 @@ Harden the system before adding features.
 - [ ] Add input validation for all campaign file parsing (graceful error messages, not stack traces)
 - [ ] Add a `--campaign` CLI flag to skip the selection menu (`python src/main.py --campaign lost-mines`)
 - [ ] Add a `--reset` CLI flag to reset session state at startup
-- [ ] Add a `--provider` CLI flag to override `LLM_PROVIDER` from the command line
+- [ ] Add a `--provider` CLI flag to override `LLM_PROVIDER` from the command line (Ollama-only until Phase 13; passing `openai` will raise a clear not-yet-supported error)
 - [ ] Add a `--model` CLI flag to override `DM_MODEL` from the command line (e.g., quickly switch local models)
 - [ ] Implement token counting before sending to the LLM — truncate oldest session messages if context is too large while preserving the system prompt and journal; use model context window from `ModelInfo`
 - [ ] At Ollama startup, query the selected model's context length via `ollama show <model>` and store it in settings
@@ -315,6 +310,27 @@ Make it easy to create new campaigns in the required format.
 
 ---
 
+## Phase 13 — OpenAI Provider Integration
+
+Add support for cloud-hosted OpenAI models. The system must be fully functional with Ollama before this phase begins.
+
+- [ ] `src/llm/openai_provider.py`
+  - [ ] Implement `OpenAIProvider(LLMProvider)` using the `openai` Python SDK
+  - [ ] Read `OPENAI_API_KEY` and `DM_MODEL` from settings
+  - [ ] Pass `temperature`, `max_tokens` from settings
+  - [ ] Implement retry with exponential backoff for rate limit and transient API errors
+- [ ] Update `src/llm/factory.py` to support `LLM_PROVIDER=openai` — return `OpenAIProvider`
+- [ ] Update `src/main.py` to handle OpenAI at startup: verify `OPENAI_API_KEY` is present; remove the Ollama-only guard
+- [ ] Confirm `src/config.py` `OPENAI_API_KEY` validation triggers correctly when `LLM_PROVIDER=openai`
+- [ ] Update the `--provider` CLI flag (Phase 9) to accept `openai` as a valid value
+- [ ] Write unit tests in `tests/test_llm.py`
+  - [ ] Test that `factory.create_provider` returns `OpenAIProvider` when `LLM_PROVIDER=openai`
+  - [ ] Mock the OpenAI SDK and test `OpenAIProvider.complete` formats messages correctly
+  - [ ] Test that a missing `OPENAI_API_KEY` raises a clear, user-friendly error
+- [ ] End-to-end smoke test: play the opening scene of the example campaign via OpenAI; confirm output parity with Ollama behaviour
+
+---
+
 ## Stretch Goals & Future Ideas
 
 - [ ] Web UI — a browser-based chat interface instead of the terminal
@@ -337,7 +353,7 @@ Make it easy to create new campaigns in the required format.
 
 ## Known Decisions to Revisit
 
-- **LLM provider abstraction**: ~~Decided~~ — implement a `src/llm/` layer with an abstract `LLMProvider` interface, an `OpenAIProvider`, and an `OllamaProvider`. The factory reads `LLM_PROVIDER` from config. The DM agent always works through the interface and never references a specific backend.
+- **LLM provider abstraction**: ~~Decided~~ — implement a `src/llm/` layer with an abstract `LLMProvider` interface and an `OllamaProvider` (Phase 2). `OpenAIProvider` is added in Phase 13 once the system is proven locally. The factory reads `LLM_PROVIDER` from config. The DM agent always works through the interface and never references a specific backend.
 - **Ollama model selection**: If `DM_MODEL` is unset and provider is `ollama`, query `ollama list` at startup and present an interactive picker. Store the selected model name in the running config (not written back to `.env`).
 - **Rules in context strategy**: For 5e, the full SRD rules text is modest enough to fit in a large context window alongside a campaign. Start with full-rules inclusion per turn. For larger rulesets (Pathfinder, etc.) or smaller context window models, implement RAG over the rules directory as a follow-up.
 - **NarrativeState tracking**: The context builder needs to know the current state (combat/exploration/social) to select relevant rules sections. Decide whether this is tracked explicitly by the DM agent or inferred from the LLM's last response.
