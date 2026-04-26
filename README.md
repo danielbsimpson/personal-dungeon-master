@@ -2,7 +2,25 @@
 
 An AI-powered Dungeon Master that reads from structured campaign files and guides a player through a tabletop RPG adventure via a conversational text interface — with voice interaction planned for a future phase.
 
-Runs against **OpenAI API models** or **local models via Ollama** — your choice at startup. Built for players who want full privacy and offline play on their own hardware.
+Runs **entirely locally via [Ollama](https://ollama.com/)** — no API keys, no cloud calls, no data leaving your machine. OpenAI API support is planned for a later phase once the system is proven fully offline. Built for players who want full privacy and offline play on their own hardware.
+
+---
+
+## Build Status
+
+| Phase | Description | Status |
+|---|---|---|
+| 1 | Project scaffolding, rules files, example campaign | ✅ Complete |
+| 2 | Ollama LLM provider, model picker | ✅ Complete (6 tests) |
+| 3 | Campaign loading, parsing, and selection | ✅ Complete (52 tests) |
+| 4 | Rules system — loader, reference, NarrativeState | ✅ Complete (25 tests) |
+| 5 | Memory graph — Graphiti + Kuzu | 🔲 Not started |
+| 6 | DM agent — context builder, spoiler guard | 🔲 Not started |
+| 7 | Dice engine | 🔲 Not started |
+| 8 | CLI text interface and main loop | 🔲 Not started |
+| 9+ | Polish, voice, multi-character, OpenAI, etc. | 🔲 Not started |
+
+**83 tests passing** across Phases 1–4.
 
 ---
 
@@ -12,7 +30,7 @@ Personal Dungeon Master is a locally-run AI assistant that acts as your Dungeon 
 
 The DM is designed to be faithful to the campaign source material while never revealing future events prematurely. It adapts to player choices within the scope of the written adventure, maintaining narrative coherence at all times.
 
-The system supports a pluggable LLM provider layer. You can point it at the OpenAI API for cloud-hosted models, or switch to a fully local setup using [Ollama](https://ollama.com/) — ideal for offline play, privacy, or running on your own GPU hardware.
+The system runs entirely locally via [Ollama](https://ollama.com/). A pluggable LLM provider layer is in place so OpenAI API support can be added later without changing any application logic, but the system is designed and tested against local models first.
 
 ---
 
@@ -22,13 +40,13 @@ The system supports a pluggable LLM provider layer. You can point it at the Open
 - **Campaign selection** — choose from any campaign folder in your local `campaigns/` directory
 - **AI Dungeon Master** — an LLM-powered DM that narrates, responds, and adjudicates in natural language
 - **Text-based chat interface** — type your actions and responses; the DM replies in character
-- **Persistent memory** — the DM remembers every encounter, decision, and event from the current session and across sessions
+- **Persistent memory** — the DM remembers every encounter, decision, and event using a [Graphiti](https://github.com/getzep/graphiti) temporal knowledge graph backed by [Kuzu](https://kuzudb.com/) — an embeddable, file-based graph database (no server required)
 - **Campaign-aware context** — the DM reads all campaign files at startup and uses them to stay accurate and immersive
 - **Chronological spoiler protection** — the DM will not reveal future events, locations, or enemies before they are reached in the story
 - **Character sheet awareness** — the DM tracks player stats, inventory, abilities, and progression
 - **Creature reference** — the DM uses creature data for accurate combat narration and encounter descriptions
-- **Pluggable LLM providers** — run against OpenAI API models or local models via Ollama; switch with a single config value
-- **Local model support** — works with any model pulled into Ollama (e.g., `llama3`, `mistral`, `gemma3`, `deepseek-r2`); recommended for offline play or GPU-local inference
+- **Local model support** — works with any model pulled into Ollama (e.g., `llama3.1`, `mistral-nemo`, `qwen2.5`, `deepseek-r1`); runs entirely offline on your own GPU hardware
+- **Pluggable LLM providers** — provider abstraction is in place; OpenAI API support is added in a later phase once the system is proven locally
 - **Full 5e rules knowledge** — the DM is grounded in the complete D&D 5th Edition System Reference Document (SRD); it applies rules correctly for combat, spellcasting, ability checks, conditions, and more
 - **Rules-accurate adjudication** — when a player attempts an action, the DM applies the correct 5e mechanics (attack rolls, saving throws, skill checks, spell effects) without the player needing to look anything up
 - **Integrated dice engine** — the DM rolls all dice using a Python RNG engine with cryptographically seeded randomness; every attack roll, damage roll, saving throw, and skill check uses the correct die type (d4, d6, d8, d10, d12, d20, d100) with appropriate modifiers applied automatically
@@ -70,12 +88,15 @@ personal-dungeon-master/
 │   ├── dm/
 │   │   ├── dungeon_master.py      # Core DM agent (LLM orchestration)
 │   │   ├── context_builder.py     # Loads and structures campaign files into LLM context
-│   │   ├── memory.py              # Persistent memory: session logs, encounter history
-│   │   └── spoiler_guard.py       # Ensures the DM does not reference future campaign events
+│   │   ├── spoiler_guard.py       # Ensures the DM does not reference future campaign events
+│   │   └── memory/
+│   │       ├── graphiti_store.py  # Graphiti wrapper — episode ingestion and hybrid search
+│   │       ├── graphiti_factory.py# Builds Graphiti LLM/embedder clients for Ollama
+│   │       ├── session_store.py   # Short-term sliding window of recent messages
+│   │       └── manager.py         # MemoryManager — composes graph + session + progress
 │   ├── llm/
 │   │   ├── base.py                # Abstract LLMProvider interface
-│   │   ├── openai_provider.py     # OpenAI API implementation
-│   │   ├── ollama_provider.py     # Ollama local model implementation
+│   │   ├── ollama_provider.py     # Ollama local model implementation (current)
 │   │   └── factory.py             # Instantiate the correct provider from config
 │   ├── rules/
 │   │   ├── loader.py              # Loads rule files for the configured game edition
@@ -88,13 +109,13 @@ personal-dungeon-master/
 │   │   ├── parser.py              # Parses campaign book, character sheet, and creature file
 │   │   └── selector.py            # Interactive campaign selection at startup
 │   ├── interface/
-│   │   ├── cli.py                 # Text-based terminal chat interface
-│   │   └── voice.py               # (Future) Voice I/O interface
+│   │   └── cli.py                 # Text-based terminal chat interface
 │   └── config.py                  # Configuration (model selection, paths, settings)
 ├── memory/
 │   └── <campaign_name>/
-│       ├── session.json           # Current session state and conversation history
-│       └── journal.md             # Human-readable log of the player's journey
+│       ├── graphiti.kuzu/         # Kuzu graph database (entities, relationships, temporal facts)
+│       ├── session.json           # Short-term sliding window of recent messages
+│       └── progress.json          # Current scene/section pointer (spoiler guard state)
 ├── tests/
 │   ├── test_loader.py
 │   ├── test_parser.py
@@ -176,9 +197,9 @@ The full campaign text, written sequentially. This is the authoritative source f
 
 ### Prerequisites
 - Python 3.11+
-- **One of the following LLM backends:**
-  - **OpenAI API** — an API key from [platform.openai.com](https://platform.openai.com)
-  - **Ollama (local)** — [Ollama](https://ollama.com/) installed and running with at least one model pulled (e.g., `ollama pull llama3`). A mid-range GPU (e.g., RTX 4060 8 GB) can run 8B–13B parameter models comfortably.
+- **[Ollama](https://ollama.com/)** installed and running with at least one model pulled. A mid-range GPU (e.g., RTX 4060 8 GB) can run 8B–13B parameter models comfortably.
+  - Recommended models (strong structured output / tool-calling support required for Graphiti memory extraction): `llama3.1:8b`, `qwen2.5:7b`, `mistral-nemo`, `deepseek-r1:7b`
+  - An embedding model for memory retrieval: `nomic-embed-text` (`ollama pull nomic-embed-text`)
 - A campaign folder set up under `campaigns/`
 
 ### Installation
@@ -200,29 +221,27 @@ Copy `.env.example` to `.env` and configure your chosen backend:
 cp .env.example .env
 ```
 
-**Option A — OpenAI API:**
-```env
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-...
-DM_MODEL=gpt-4o
-CAMPAIGNS_DIR=./campaigns
-MEMORY_DIR=./memory
-GAME_EDITION=5e
-RULES_DIR=./rules
-```
-
-**Option B — Local Ollama:**
+**Local Ollama (the only supported backend right now):**
 ```env
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
-DM_MODEL=llama3
+DM_MODEL=llama3.1:8b
+EMBEDDING_MODEL=nomic-embed-text
 CAMPAIGNS_DIR=./campaigns
 MEMORY_DIR=./memory
 GAME_EDITION=5e
 RULES_DIR=./rules
+SESSION_WINDOW=20
+GRAPHITI_TELEMETRY_ENABLED=false
 ```
 
-For Ollama, make sure the Ollama service is running (`ollama serve`) and the model is pulled (`ollama pull llama3`) before starting the DM. You can also let the startup menu list your available local models and pick one interactively.
+Make sure Ollama is running (`ollama serve`) and both models are pulled before starting:
+```bash
+ollama pull llama3.1:8b
+ollama pull nomic-embed-text
+```
+
+If `DM_MODEL` is not set, the startup menu will list your available local models and let you pick one interactively.
 
 ### Running
 
@@ -240,13 +259,13 @@ You will be prompted to select a campaign. Once selected, the DM will load all c
 At startup, the `campaign/loader.py` module scans the `campaigns/` directory, validates each campaign folder, and presents a selection menu. Once chosen, `parser.py` reads all four campaign files into structured data objects.
 
 ### 2. LLM Provider Selection
-`llm/factory.py` reads `LLM_PROVIDER` from config and instantiates the correct provider:
-- `openai` → `OpenAIProvider` — calls the OpenAI Chat Completions API using the `openai` Python SDK
-- `ollama` → `OllamaProvider` — calls the local Ollama REST API (`/api/chat`), which is OpenAI-compatible, so the same message format is used for both
+`llm/factory.py` reads `LLM_PROVIDER` from config and instantiates the correct provider. Currently only `ollama` is supported; OpenAI support is added in a later phase.
 
-Both providers implement the same `LLMProvider` abstract interface: `complete(messages, **kwargs) -> str`. The DM agent never knows or cares which backend is active.
+`OllamaProvider` calls the Ollama OpenAI-compatible endpoint (`{OLLAMA_BASE_URL}/v1/chat/completions`) via the `openai` SDK with a custom `base_url` — no real API key required. At startup it queries `GET /api/tags` to verify the service is reachable and `POST /api/show` to discover the model's context window length.
 
-If the provider is `ollama`, the startup sequence also queries `ollama list` to display available local models, allowing the user to pick one before the adventure begins.
+All providers implement the same `LLMProvider` abstract interface: `complete(messages, **kwargs) -> str`. The DM agent never references a specific backend directly.
+
+If `DM_MODEL` is not set, the startup sequence queries `ollama list` and displays an interactive model picker.
 
 ### 3. Rules Loading
 `rules/loader.py` reads the edition set in `GAME_EDITION` (default `5e`) and loads all rule files from `rules/5e/` into a structured `RulesReference` object. This object is passed to the context builder and is available for the DM agent to draw from throughout the session.
@@ -268,22 +287,27 @@ Every roll result is displayed to the player in the terminal (die type, each ind
 ### 5. Context Building
 `dm/context_builder.py` assembles a system prompt for the LLM. This prompt includes:
 - The DM persona and behavioral rules
-- The game edition and active rules reference (relevant sections from `rules/5e/`)
+- The game edition and active rules reference (relevant sections from `rules/5e/` via `get_relevant_rules()`)
 - The campaign summary and tone
 - The full character sheet
 - The full creature reference
 - The portion of the campaign book that has been reached so far (the "revealed window")
-- A summary of everything that has happened in the adventure (from memory)
+- **Retrieved graph memory context** — the most relevant entities and relationships from the Graphiti knowledge graph for the current turn (via `MemoryManager.get_context()`), injected as a structured block
+- **Short-term session window** — the last N conversation turns (configurable via `SESSION_WINDOW`)
 
 ### 6. Spoiler Guard
 `dm/spoiler_guard.py` maintains a pointer into the campaign book representing how far the player has progressed. Only content up to and including the current narrative position is included in the LLM context. Future encounters, plot twists, and locations are withheld until the player reaches them.
 
 ### 7. Memory
-`dm/memory.py` maintains two forms of memory:
-- **Session history** — the full conversation log for the current session, stored in `memory/<campaign_name>/session.json`
-- **Journey journal** — a summarized, human-readable log of key events, decisions, NPCs met, and items found, stored in `memory/<campaign_name>/journal.md`
+The `dm/memory/` subpackage maintains two forms of memory:
 
-At the start of each session, the journal is included in the LLM context so the DM is fully caught up on the player's history, even after the conversation window has been truncated.
+- **Knowledge graph** (long-term) — powered by [Graphiti](https://github.com/getzep/graphiti) with a [Kuzu](https://kuzudb.com/) embedded graph database. After each DM response, the response is ingested as a Graphiti *episode*. Graphiti automatically extracts named entities (NPCs, locations, items, factions, events) and relationships, stores them as temporally-tagged nodes and edges, and handles deduplication. At the next turn, `MemoryManager.get_context()` calls `graphiti.search()` — hybrid semantic + keyword + graph traversal — to retrieve only the most relevant facts for injection into the system prompt. No full-history dump; no summarization needed.
+
+- **Session window** (short-term) — the last N raw `{role, content}` messages, managed by `SessionStore` and stored in `memory/<campaign_name>/session.json`. Appended after every turn and trimmed to `SESSION_WINDOW` (default 20).
+
+- **Progress pointer** — the current scene index stored in `memory/<campaign_name>/progress.json`, used by the spoiler guard to determine how much of the campaign book is visible.
+
+> **Model requirement**: Graphiti's entity extraction uses LLM structured output (tool/function calling). For best results with Ollama, use a model with strong tool-calling support such as `llama3.1:8b`, `qwen2.5:7b`, or `mistral-nemo`. Smaller or older models may produce malformed extraction output that Graphiti will silently skip.
 
 ### 8. The Chat Loop
 The main loop in `interface/cli.py` accepts text input from the user, passes it to the DM agent along with the full context window, and prints the DM's response. The conversation continues until the user quits.
@@ -303,7 +327,8 @@ The DM is instructed to:
 - Handle edge cases (contested rolls, cover, concentration, opportunity attacks) according to RAW (Rules As Written) by default
 - Never break the fourth wall or acknowledge being an AI unless the user explicitly asks
 - Advance the story only as fast as the player drives it
-- Summarize key events in memory after each significant encounter
+- Emit `[ROLL: ...]` tags for every dice roll — never invent results
+- Keep narration consistent with facts stored in memory (the Graphiti knowledge graph supplies these as context)
 
 ---
 
@@ -323,25 +348,30 @@ The DM's rules knowledge is stored in the `rules/` directory as plain Markdown f
 
 ### How Rules Are Used
 
-At session startup, all rule files for the configured edition are loaded into a `RulesReference` object. The context builder injects relevant sections into the system prompt based on the current narrative state (e.g., if combat begins, the full combat and conditions sections are included). This keeps the DM accurate without consuming the entire context window with rules on every turn.
+At session startup, all rule files for the configured edition are loaded into a `RulesReference` object. The context builder injects relevant sections into the system prompt based on the current `NarrativeState` (`EXPLORATION`, `COMBAT`, `SOCIAL`, `REST`). In combat, `combat.md` + `conditions.md` + `core.md` are included; if a spellcasting keyword appears in the current turn, `spellcasting.md` is added automatically. This keeps the DM accurate without consuming the entire context window with rules on every turn.
 
-For future scalability, the rules reference is designed to support RAG (Retrieval-Augmented Generation) — querying only the most relevant rules passages per turn rather than including the full ruleset each time.
+For very large rulesets (e.g., Pathfinder 2e), full inclusion can be replaced with RAG over the rules directory — the `RulesReference` object is designed to support this as a future drop-in.
 
 ---
 
 ## Local Model Recommendations
 
-When using Ollama, model choice has a significant impact on narration quality and response speed. The following models have been tested or are recommended for this use case (all runnable on an RTX 4060 8 GB):
+When using Ollama, model choice has a significant impact on narration quality, response speed, and memory extraction accuracy. Graphiti's entity extraction requires structured output / tool-calling support, so models with strong function-calling capabilities are preferred.
 
 | Model | Size | Notes |
-|---|---|---|
-| `llama3.1:8b` | ~5 GB | Good balance of speed and quality for narration |
-| `mistral:7b` | ~4 GB | Fast, strong instruction following |
-| `gemma3:9b` | ~6 GB | Strong at creative writing and roleplay |
-| `deepseek-r2:8b` | ~5 GB | Good reasoning for complex encounter adjudication |
+|---|---|—|
+| `llama3.1:8b` | ~5 GB | **Recommended** — strong tool-calling, good narration quality |
+| `qwen2.5:7b` | ~5 GB | Excellent structured output; strong reasoning |
+| `mistral-nemo` | ~7 GB | Strong instruction following and tool-calling |
+| `deepseek-r1:7b` | ~5 GB | Good reasoning for complex encounter adjudication |
 | `llama3.1:70b-q4` | ~40 GB | Requires high VRAM; best quality if hardware allows |
 
-Larger models (30B+) will require a GPU with more VRAM or CPU offloading (slower). The context window of the chosen model is automatically respected — the system will warn if the campaign + memory content exceeds the model's context length.
+You will also need the embedding model used by Graphiti for memory retrieval:
+```bash
+ollama pull nomic-embed-text
+```
+
+Larger models (30B+) require more VRAM or CPU offloading (slower). The context window of the chosen model is automatically queried at startup and respected — the system will warn if campaign + memory content approaches the model's context length.
 
 ---
 
