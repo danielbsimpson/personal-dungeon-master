@@ -64,6 +64,19 @@ class Settings(BaseSettings):
     dm_temperature: float = 0.8
     max_tokens: int = 1024
 
+    # ── Memory / Graphiti ─────────────────────────────────────────────────────
+    session_window: int = 20
+    """Number of most-recent messages kept in the short-term session window."""
+
+    embedding_model: str = "nomic-embed-text"
+    """Ollama model to use for Graphiti entity embeddings."""
+
+    embedding_dim: int = 768
+    """Embedding vector dimension. Must match the chosen embedding_model."""
+
+    graphiti_telemetry_enabled: bool = False
+    """Whether to send anonymous telemetry to Graphiti/Zep."""
+
     # ── Derived paths (set by validators) ─────────────────────────────────────
     # Not read from env; computed from rules_dir + game_edition.
     rules_edition_dir: Path = _PROJECT_ROOT / "rules" / "5e"
