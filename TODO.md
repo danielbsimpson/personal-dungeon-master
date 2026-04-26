@@ -94,27 +94,27 @@ Build the layer that reads campaign folders and turns them into structured data 
 
 Load the full ruleset for the configured game edition and make it available to the DM agent.
 
-- [ ] `src/rules/loader.py`
-  - [ ] Read `GAME_EDITION` from settings (default `5e`)
-  - [ ] Scan `RULES_DIR/<edition>/` and load all `.md` files into a `RulesReference` dataclass
-  - [ ] Each rule file maps to a named section (e.g., `combat`, `spellcasting`, `conditions`)
-  - [ ] Raise a clear error if the edition folder does not exist or contains no rule files
-- [ ] `src/rules/reference.py`
-  - [ ] `get_all_rules(ref: RulesReference) -> str` — return the full rules text concatenated (for smaller models or short campaigns)
-  - [ ] `get_relevant_rules(ref: RulesReference, context: str) -> str` — return only the sections most relevant to the current narrative context (e.g., if combat is active return `combat.md` + `conditions.md`; if a spell is being cast return `spellcasting.md`)
-  - [ ] Define a `NarrativeState` enum (`EXPLORATION`, `COMBAT`, `SOCIAL`, `REST`) to drive section selection
-  - [ ] Always include `core.md` as a baseline in every prompt
-- [ ] Populate `rules/5e/` rule files with accurate 5e SRD content:
-  - [ ] `core.md` — ability scores & modifiers, proficiency bonus progression, skill list & governing abilities, ability checks, saving throws, passive scores, advantage/disadvantage, hidden rules
-  - [ ] `combat.md` — initiative, surprise, turn structure, action/bonus action/reaction/free action/movement, attack rolls, damage rolls, critical hits, two-weapon fighting, grapple/shove, ranged attack rules, cover, death saving throws, stabilisation, mounted combat, underwater combat
-  - [ ] `conditions.md` — full definitions for all 15 conditions with mechanical effects
-  - [ ] `spellcasting.md` — spell slots by class, cantrips, concentration rules, ritual casting, verbal/somatic/material components, spell attack rolls, spellcasting ability modifier & save DC formula, counterspell/dispel rules, spell school descriptions
-  - [ ] `equipment.md` — weapon properties (finesse, versatile, thrown, reach, etc.), weapon tables, armor categories & AC, shields, donning/doffing armor, encumbrance (standard & variant), silvered weapons, improvised weapons
-- [ ] Write unit tests in `tests/test_rules.py`
-  - [ ] Test that the loader correctly reads all files in `rules/5e/`
-  - [ ] Test that `get_relevant_rules` returns the combat section when `NarrativeState` is `COMBAT`
-  - [ ] Test that `core.md` is always included regardless of state
-  - [ ] Test that an unknown edition raises a clear error
+- [x] `src/rules/loader.py`
+  - [x] Read `GAME_EDITION` from settings (default `5e`)
+  - [x] Scan `RULES_DIR/<edition>/` and load all `.md` files into a `RulesReference` dataclass
+  - [x] Each rule file maps to a named section (e.g., `combat`, `spellcasting`, `conditions`)
+  - [x] Raise a clear error if the edition folder does not exist or contains no rule files
+- [x] `src/rules/reference.py`
+  - [x] `get_all_rules(ref: RulesReference) -> str` — return the full rules text concatenated (for smaller models or short campaigns)
+  - [x] `get_relevant_rules(ref: RulesReference, context: str) -> str` — return only the sections most relevant to the current narrative context (e.g., if combat is active return `combat.md` + `conditions.md`; if a spell is being cast return `spellcasting.md`)
+  - [x] Define a `NarrativeState` enum (`EXPLORATION`, `COMBAT`, `SOCIAL`, `REST`) to drive section selection
+  - [x] Always include `core.md` as a baseline in every prompt
+- [x] Populate `rules/5e/` rule files with accurate 5e SRD content:
+  - [x] `core.md` — ability scores & modifiers, proficiency bonus progression, skill list & governing abilities, ability checks, saving throws, passive scores, advantage/disadvantage, hidden rules
+  - [x] `combat.md` — initiative, surprise, turn structure, action/bonus action/reaction/free action/movement, attack rolls, damage rolls, critical hits, two-weapon fighting, grapple/shove, ranged attack rules, cover, death saving throws, stabilisation, mounted combat, underwater combat
+  - [x] `conditions.md` — full definitions for all 15 conditions with mechanical effects
+  - [x] `spellcasting.md` — spell slots by class, cantrips, concentration rules, ritual casting, verbal/somatic/material components, spell attack rolls, spellcasting ability modifier & save DC formula, counterspell/dispel rules, spell school descriptions
+  - [x] `equipment.md` — weapon properties (finesse, versatile, thrown, reach, etc.), weapon tables, armor categories & AC, shields, donning/doffing armor, encumbrance (standard & variant), silvered weapons, improvised weapons
+- [x] Write unit tests in `tests/test_rules.py`
+  - [x] Test that the loader correctly reads all files in `rules/5e/`
+  - [x] Test that `get_relevant_rules` returns the combat section when `NarrativeState` is `COMBAT`
+  - [x] Test that `core.md` is always included regardless of state
+  - [x] Test that an unknown edition raises a clear error
 
 ---
 
