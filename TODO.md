@@ -179,40 +179,39 @@ Build the memory system using [Graphiti](https://github.com/getzep/graphiti) —
 
 Build the LLM-powered Dungeon Master that reads context and generates responses.
 
-- [ ] `src/dm/spoiler_guard.py`
-  - [ ] Accept the full campaign book text and a current progress pointer
-  - [ ] Return only the portion of the campaign book up to and including the current section
-  - [ ] Implement section detection (scenes, chapters, or encounter headers in the `.txt` file)
-  - [ ] Ensure the revealed window grows as progress advances but never shrinks
-- [ ] `src/dm/context_builder.py`
-  - [ ] `build_system_prompt(campaign: ParsedCampaign, rules: RulesReference, memory: MemoryManager) -> str`
-    - [ ] Include DM persona instructions and behavioral rules
-    - [ ] Include game edition identifier and relevant rules sections (via `rules/reference.py`)
-    - [ ] Include campaign summary
-    - [ ] Include character sheet (formatted clearly for the LLM)
-    - [ ] Include creature reference
-    - [ ] Include the revealed portion of the campaign book (via `spoiler_guard`)
-    - [ ] Include the retrieved graph memory context (via `memory.get_context()`) — entities and relationships relevant to the current turn, not a full history dump
-    - [ ] Append the short-term session window (last N messages) as prior conversation context
-  - [ ] Keep system prompt within a configurable token budget (avoid context overflow)
-  - [ ] Log a warning if the context approaches the model's context window limit
-  - [ ] Update `NarrativeState` passed to `get_relevant_rules` based on current session state (e.g., swap to `COMBAT` when combat begins)
-- [ ] `src/dm/dungeon_master.py`
-  - [ ] `DungeonMaster` class — wraps the `LLMProvider` (injected via factory), `DiceRoller`, context builder, and memory manager
-  - [ ] `start_campaign()` — deliver the opening narration (introduction to the adventure)
-  - [ ] `respond(player_input: str) -> str`:
-    1. Build context and send to LLM to get a raw response
-    2. Scan raw response for `[ROLL: <type> <die>[+modifier]]` tags using regex
-    3. For each tag, call the dice engine with the correct `Die` and modifier; replace the tag with the real result inline
-    4. Inject resolved roll results as a system message and call the LLM once more to generate the narrative from actual results
-    5. Return the final narrated response
-  - [ ] After each response, call `await memory.record_turn(player_input, dm_response, turn)` — this appends to the session window and ingests the DM response as a Graphiti episode in one call
-  - [ ] After each response, check if the response implies a new section has been reached and advance the progress pointer
+- [x] `src/dm/spoiler_guard.py`
+  - [x] Accept the full campaign book text and a current progress pointer
+  - [x] Return only the portion of the campaign book up to and including the current section
+  - [x] Implement section detection (scenes, chapters, or encounter headers in the `.txt` file)
+  - [x] Ensure the revealed window grows as progress advances but never shrinks
+- [x] `src/dm/context_builder.py`
+  - [x] `build_system_prompt(campaign: ParsedCampaign, rules: RulesReference, memory: MemoryManager) -> str`
+    - [x] Include DM persona instructions and behavioral rules
+    - [x] Include game edition identifier and relevant rules sections (via `rules/reference.py`)
+    - [x] Include campaign summary
+    - [x] Include character sheet (formatted clearly for the LLM)
+    - [x] Include creature reference
+    - [x] Include the revealed portion of the campaign book (via `spoiler_guard`)
+    - [x] Include the retrieved graph memory context (via `memory.get_context()`) — entities and relationships relevant to the current turn, not a full history dump
+    - [x] Append the short-term session window (last N messages) as prior conversation context
+  - [x] Keep system prompt within a configurable token budget (avoid context overflow)
+  - [x] Log a warning if the context approaches the model's context window limit
+  - [x] Update `NarrativeState` passed to `get_relevant_rules` based on current session state (e.g., swap to `COMBAT` when combat begins)
+- [x] `src/dm/dungeon_master.py`
+  - [x] `DungeonMaster` class — wraps the `LLMProvider` (injected via factory), context builder, and memory manager
+  - [x] `start_campaign()` — deliver the opening narration (introduction to the adventure)
+  - [x] `respond(player_input: str) -> str`:
+    1. Infer narrative state from player input
+    2. Build context (system prompt + session window) and call LLM
+    3. Record turn in memory (session window + Graphiti episode)
+    4. Advance progress pointer if next scene title appears in DM response
+    5. Return the final DM response
+    - Note: Dice tag substitution (`[ROLL: ...]`) is wired in Phase 7
   - [ ] Implement retry logic with exponential backoff for API errors (delegates to provider implementation)
-- [ ] Write unit tests in `tests/test_dm.py`
-  - [ ] Mock the `LLMProvider` interface and test that the system prompt is built correctly
-  - [ ] Test that spoiler guard correctly limits campaign content
-  - [ ] Test that progress advances after appropriate responses
+- [x] Write unit tests in `tests/test_dm.py`
+  - [x] Mock the `LLMProvider` interface and test that the system prompt is built correctly
+  - [x] Test that spoiler guard correctly limits campaign content
+  - [x] Test that progress advances after appropriate responses
 
 ---
 
