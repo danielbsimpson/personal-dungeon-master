@@ -118,59 +118,60 @@ Load the full ruleset for the configured game edition and make it available to t
 
 ---
 
-## Phase 5 — Memory System (Graph RAG)
+## Phase 5 — Memory System (Graphiti Graph RAG)
 
-Build a Graph RAG memory system so the DM retains rich, structured knowledge of the player's journey across sessions and retrieves only the most relevant context per turn — keeping prompts compact regardless of campaign length.
+Build the memory system using [Graphiti](https://github.com/getzep/graphiti) — a temporal context graph engine that automatically extracts entities and relationships from each DM response and stores them in a queryable knowledge graph. Graphiti handles entity extraction, deduplication, temporal fact management, and hybrid retrieval; we only need to wire it to our turn loop and provide a local graph database.
 
-### Data model
+### Architecture
 
-- **Nodes** represent named entities in the world: `Character`, `Location`, `Creature`, `Item`, `Faction`, `Event`, `Revelation`
-- **Edges** represent directed relationships between entities: `MET`, `VISITED`, `DEFEATED`, `OWNS`, `KNOWS`, `IS_PART_OF`, `CAUSED`, `DISCOVERED`, `ALLIED_WITH`, `HOSTILE_TO`
-- Every node and edge carries a `turn` timestamp (integer message index) and an optional `notes` string
-- Storage: `memory/<campaign_name>/graph.json` — a plain JSON adjacency list; swappable to SQLite in a later phase
-- Short-term context: `memory/<campaign_name>/session.json` — the last N raw `{role, content}` messages (configurable window; default 20)
-- Progress pointer: `memory/<campaign_name>/progress.json` — current scene index
+- **Graph engine**: `graphiti-core` backed by **Kuzu** — an embeddable, file-based graph database (no separate server, stores under `memory/<campaign_name>/graphiti.kuzu/`). Kuzu is the local-first equivalent of Neo4j.
+- **Entity extraction**: Graphiti calls the configured LLM with a structured-output prompt to extract entities and relationships from each ingested episode. No custom extraction code needed.
+- **Episodes**: Each DM response (and optionally player input) is ingested as a Graphiti episode (`add_episode()`). Graphiti derives entities, relationships, and temporal facts automatically.
+- **Retrieval**: `graphiti.search(query)` performs hybrid retrieval (semantic + keyword + graph traversal) to return the most relevant facts for the current turn.
+- **Short-term context**: `SessionStore` continues to manage the last N raw `{role, content}` messages — Graphiti does not manage the chat window.
+- **Progress pointer**: `memory/<campaign_name>/progress.json` — current scene index (unchanged).
+
+> ⚠️ **Structured output requirement**: Graphiti's entity extraction relies on LLM structured output (function/tool calling). Ollama support is via `OpenAIGenericClient`. Models with strong structured output support are recommended — e.g., `llama3.1:8b`, `mistral-nemo`, `qwen2.5:7b`, or `deepseek-r1:7b`. Smaller models without tool-calling support may produce malformed extractions that Graphiti will silently skip. Document the recommended model in `.env.example`.
 
 ### Tasks
 
-- [ ] Add `networkx` to `requirements.txt` and `pyproject.toml`
-- [ ] `src/dm/memory/graph_store.py`
-  - [ ] Define `EntityType` and `RelationType` enums
-  - [ ] Define `Entity` dataclass: `id` (slug), `type: EntityType`, `label: str`, `notes: str`, `first_seen_turn: int`
-  - [ ] Define `Relationship` dataclass: `source_id`, `relation: RelationType`, `target_id`, `notes: str`, `turn: int`
-  - [ ] `GraphStore` class backed by a `networkx.DiGraph`
-    - [ ] `add_entity(entity: Entity)` — upsert; update `notes` if the entity already exists
-    - [ ] `add_relationship(rel: Relationship)` — add directed edge; skip duplicate relation on same turn
-    - [ ] `get_subgraph(seed_ids: list[str], depth: int = 2) -> str` — BFS from seed nodes up to `depth` hops; serialise the result as a structured text block suitable for LLM context
-    - [ ] `save(path: Path)` / `load(path: Path)` — persist/restore the full graph as JSON
-- [ ] `src/dm/memory/extractor.py`
-  - [ ] `extract_entities_and_relations(text: str, provider: LLMProvider, turn: int) -> tuple[list[Entity], list[Relationship]]`
-    - [ ] Build a terse extraction prompt asking the LLM to return JSON listing new entities and relationships found in `text`
-    - [ ] Parse and validate the JSON response; silently skip malformed entries
-    - [ ] Called once per DM response — cheap single-pass extraction
+- [ ] Add `graphiti-core[kuzu]` to `requirements.txt` and `pyproject.toml` (replaces `networkx`)
+- [ ] `src/dm/memory/graphiti_store.py`
+  - [ ] `GraphitiStore` class wrapping a `Graphiti` instance configured with `KuzuDriver`
+    - [ ] `__init__(db_path: Path, llm_client, embedder)` — create `KuzuDriver(db=str(db_path))`, instantiate `Graphiti(graph_driver=driver, llm_client=llm_client, embedder=embedder)`
+    - [ ] `async setup()` — call `graphiti.build_indices_and_constraints()` once on first run
+    - [ ] `async add_episode(name: str, content: str, source_description: str, turn: int, group_id: str)` — thin wrapper around `graphiti.add_episode(...)` with `reference_time=datetime.now()`
+    - [ ] `async search(query: str, group_id: str, num_results: int = 10) -> str` — call `graphiti.search(query, group_ids=[group_id], num_results=num_results)`, format results as a structured text block for the system prompt
+    - [ ] `async close()` — call `graphiti.close()`
+- [ ] `src/dm/memory/graphiti_factory.py`
+  - [ ] `build_graphiti_clients(settings) -> tuple[llm_client, embedder]` — constructs `OpenAIGenericClient` and `OpenAIEmbedder` both pointed at `{OLLAMA_BASE_URL}/v1` with `api_key="ollama"`, using `settings.dm_model` and a configured embedding model (default `nomic-embed-text`)
+  - [ ] Pulls embedding model name from a new `EMBEDDING_MODEL` setting (default `nomic-embed-text`, dim `768`)
 - [ ] `src/dm/memory/session_store.py`
   - [ ] `SessionStore` class scoped to a campaign path
   - [ ] `load()` — read `session.json` from disk on startup; return empty list if absent
   - [ ] `append(role: str, content: str)` — add message and persist; trim to the last N messages (default 20, configurable via `SESSION_WINDOW` setting)
   - [ ] `messages() -> list[dict]` — return the current window as `[{role, content}, ...]`
-  - [ ] `clear()` — wipe the session window (keeps graph)
+  - [ ] `clear()` — wipe the session window (graph is preserved)
 - [ ] `src/dm/memory/manager.py`
-  - [ ] `MemoryManager` class — composes `GraphStore`, `SessionStore`, and progress pointer
-  - [ ] `load(campaign_name: str)` — load graph, session, and progress from disk
-  - [ ] `record_turn(player_input: str, dm_response: str, provider: LLMProvider)` — append both messages to session, run extractor on dm_response, upsert graph
-  - [ ] `get_context(current_text: str) -> str` — extract seed entity names from `current_text`, retrieve the relevant subgraph, return a formatted block for the system prompt
-  - [ ] `advance_progress(to_section: int)` — update and persist the scene pointer
+  - [ ] `MemoryManager` class — composes `GraphitiStore`, `SessionStore`, and progress pointer
+  - [ ] `async load(campaign_name: str)` — set up `GraphitiStore` (run `setup()` if first use), load session and progress from disk
+  - [ ] `async record_turn(player_input: str, dm_response: str, turn: int)` — append both messages to `SessionStore`; ingest `dm_response` as a Graphiti episode
+  - [ ] `async get_context(current_text: str, group_id: str) -> str` — call `GraphitiStore.search(current_text, group_id)` and return the formatted block for injection into the system prompt
+  - [ ] `advance_progress(to_section: int)` — update and persist the scene pointer (monotonically increasing)
   - [ ] `campaign_progress` property — current section index
   - [ ] `reset_session()` — wipe session window only; graph is preserved
-  - [ ] `full_reset()` — wipe session window and graph (new run of the campaign)
-- [ ] Add `SESSION_WINDOW` (default `20`) to `src/config.py` and `.env.example`
+  - [ ] `full_reset()` — wipe session window; drop and recreate the Kuzu DB directory
+- [ ] Add to `src/config.py` and `.env.example`:
+  - [ ] `SESSION_WINDOW` (default `20`) — short-term message window size
+  - [ ] `EMBEDDING_MODEL` (default `nomic-embed-text`) — Ollama embedding model for Graphiti
+  - [ ] `GRAPHITI_TELEMETRY_ENABLED=false` — disable anonymous telemetry in `.env.example`
 - [ ] Write unit tests in `tests/test_memory.py`
-  - [ ] Test `GraphStore.add_entity` upserts correctly (duplicate id updates notes)
-  - [ ] Test `GraphStore.get_subgraph` returns nodes within the specified depth and no further
   - [ ] Test `SessionStore` trims to the configured window size
   - [ ] Test `SessionStore` persists and reloads correctly across instances
+  - [ ] Test `SessionStore.clear()` empties the window without touching graph files
   - [ ] Test `MemoryManager.advance_progress` is monotonically increasing (cannot go backwards)
-  - [ ] Mock the `LLMProvider` and test `extract_entities_and_relations` handles malformed JSON without raising
+  - [ ] Mock `GraphitiStore` and test `MemoryManager.record_turn` calls `add_episode` and `SessionStore.append` correctly
+  - [ ] Mock `GraphitiStore` and test `MemoryManager.get_context` returns the formatted search result string
 
 ---
 
@@ -205,7 +206,7 @@ Build the LLM-powered Dungeon Master that reads context and generates responses.
     3. For each tag, call the dice engine with the correct `Die` and modifier; replace the tag with the real result inline
     4. Inject resolved roll results as a system message and call the LLM once more to generate the narrative from actual results
     5. Return the final narrated response
-  - [ ] After each response, call `memory.record_turn(player_input, dm_response, provider)` — this appends to the session window and updates the knowledge graph in one call
+  - [ ] After each response, call `await memory.record_turn(player_input, dm_response, turn)` — this appends to the session window and ingests the DM response as a Graphiti episode in one call
   - [ ] After each response, check if the response implies a new section has been reached and advance the progress pointer
   - [ ] Implement retry logic with exponential backoff for API errors (delegates to provider implementation)
 - [ ] Write unit tests in `tests/test_dm.py`
@@ -398,5 +399,5 @@ Add support for cloud-hosted OpenAI models. The system must be fully functional 
 - **Rules authority vs. narrative flexibility**: Decide the default enforcement level — strict RAW, RAW with common sense exceptions, or narrative-first. Expose this as a `DM_RULES_MODE` config setting (`strict` / `flexible`).
 - **Campaign book sectioning**: The spoiler guard needs a consistent way to detect section boundaries in the `.txt` file. Decide on a required format (e.g., lines starting with `##` or `SCENE:`) before writing any real campaigns.
 - **Context window management**: For long campaigns, the full campaign book will exceed the model's context window. Decide whether to use chunking + retrieval (RAG) or summarization. RAG is likely the right long-term answer.
-- **Memory system**: ~~Decided~~ — Graph RAG approach (Phase 5). Long-term memory is stored as a knowledge graph of entities and relationships (`graph.json`). Short-term context is the last N session messages (`session.json`). At each turn, `MemoryManager.get_context()` retrieves the relevant subgraph via BFS from seed entities in the current text and injects it into the system prompt — no full-history dump, no summarisation needed.
+- **Memory system**: ~~Decided~~ — [Graphiti](https://github.com/getzep/graphiti) + Kuzu (Phase 5). Graphiti is a temporal context graph engine that automatically extracts entities and relationships from each DM response episode. Kuzu is the local-first embeddable graph backend (no server). Short-term context is the last N session messages managed by `SessionStore`. At each turn, `MemoryManager.get_context()` calls `graphiti.search()` (hybrid semantic + keyword + graph traversal) and injects the result into the system prompt. The main risk is structured-output quality with smaller Ollama models — recommend a model with strong tool-calling support (e.g. `llama3.1:8b` or `qwen2.5:7b`).
 - **Progress tracking granularity**: Decide whether "progress" is tracked by scene number, by a keyword in the campaign book, or by a running percentage. Scene headers are the cleanest option.
