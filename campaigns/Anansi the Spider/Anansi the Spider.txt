@@ -1,0 +1,449 @@
+# Anansi the Spider
+
+A D&D 5e one-shot designed for a single player of level 5–7, set in a West African-inspired spirit market at the edge of the mortal world. A trickster god offers to grant anything the player desires — if they are clever enough to earn it.
+
+---
+
+## Overview
+
+The player character arrives at **Kumasi's Edge** — a crossroads village where the mortal world brushes up against the spirit realm — seeking a boon only the spider god **Anansi** can provide. Anansi knows they are coming. He has been watching. When he appears, he names the terms plainly: three tasks, freely undertaken. Complete them, and whatever you seek is yours. But Anansi is never simply testing what he says he is testing.
+
+**Tone:** Whimsical menace, earned weight, moral clarity at the end
+**Setting:** Kumasi's Edge and Anansi's domain within the spirit market
+**Themes:** Cleverness over strength, the nature of stories, the difference between what we want and what we need
+
+---
+
+## Pre-Session Setup (DM Only)
+
+Before the session begins — ideally the day before, or in a brief private exchange before the table gathers — ask the player one question about their character. Frame it casually:
+
+> *"Just for my notes — what does [character name] secretly want most? The thing they'd never say out loud, even to themselves?"*
+
+Write down exactly what the player says. Do not discuss it further. This answer is not used until Act 1, Task 3 — and when it arrives there, it should feel like the campaign remembered something the player almost forgot they had said.
+
+This is Anansi's greatest trick. The campaign knew what the player came here for before the player did.
+
+---
+
+## Kumasi's Edge
+
+A crossroads village at the junction of three trade roads, built beneath the canopy of an enormous silk-cotton tree old enough that its roots have cracked the market road and its branches cover the entire square. The village is ordinary by day — a trading stop, a resting place, a place where merchants argue about prices and children chase chickens through the market dust. By night, those who know what to look for say the roots of the tree glow faintly — the color of candlelight seen through silk.
+
+Traders say that if you sleep beneath the tree and make an honest wish, Anansi will hear it. Most people treat this as superstition. It is not.
+
+### Key Locations
+
+| Location | Purpose |
+|---|---|
+| **The Silk-Cotton Tree** | Center of the market square; the passage to the spirit market is found beneath its roots |
+| **Elder Kofi's House** | First point of contact; provides context, warning, and the ritual required to open the passage |
+| **The Weaver's Stall** | Yaa's stall — empty and locked, her inventory abandoned; first sign that something is wrong |
+| **The Crossroads Shrine** | Site of the three-part ritual that opens the passage beneath the tree |
+| **The Story-Vault** | Anansi's archive within the spirit market; where Task 1 takes place |
+| **The Tangle** | A labyrinth of living webs stretching between two spirit-world pillars; where Task 2 takes place |
+| **The Heart Chamber** | Anansi's innermost sanctum; where Task 3 and the final resolution take place |
+
+---
+
+## Campaign Structure
+
+### Act 0 — The Bargain
+
+**Arrival in Kumasi's Edge**
+
+The player arrives in late afternoon. Read or paraphrase the following:
+
+> *The trade road ends at a tree.*
+>
+> *That is not quite accurate — the road continues on the other side — but the tree is so large, so old, and so completely in charge of this particular square of earth that it effectively ends the road by commanding all of your attention. Its roots have split the packed-earth market road into three paths around its base. Its branches cover every stall, every rooftop, every bench. Spider silk hangs from its highest branches in long, still curtains, and if there is a wind today, none of the silk moves.*
+>
+> *Kumasi's Edge is not a large village. It is exactly the kind of place a god might choose to set up a door.*
+
+**Elder Kofi's House**
+
+The player will find **Elder Kofi** at his house on the village's eastern edge — a low-built, well-kept home with dried herbs bundled under the eaves and a cooking fire visible through the open door. If the player has come here asking after Anansi, any villager will direct them to Kofi without hesitation and without much warmth. *They have seen this before.*
+
+Kofi is expecting them. He will not say this. He will simply welcome the player inside and begin speaking before they have had a chance to explain why they came.
+
+**Kofi knows:**
+- What Anansi is — not a legend, not a folklore figure, but a specific and very old god who has maintained a door in this village for longer than the village has had a name. He is not reverential about this. He is matter-of-fact.
+- The terms of engagement: Anansi grants a boon to those who complete three tasks. He does not cheat. He does not lie. He will, however, not answer questions that were not asked — and the specific wording of the player's stated desire matters.
+- The ritual: three offerings left at the Crossroads Shrine, each given freely and without expectation. Grain for what you have eaten of the world. Cloth for what you have made in it. A spoken name — the player's own — said plainly, for what you are to it.
+- Yaa: a weaver from this village, twenty years old, who entered three days ago without completing the ritual. She went in wanting to learn to weave something no mortal hands have made. She has not come back. He would be grateful if the player brought her home.
+
+**DM Note:** Kofi will not say that Yaa is his granddaughter unless asked directly. If the player asks about his relationship to her, he will be quiet for a moment, then say: *"She is my son's daughter. She is the best weaver in this village and she knew it. She went in thinking that was enough."* A DC 12 Insight check will reveal that his composure is a performance — he is frightened, and has been frightened for three days. He will not accept comfort about it. He is waiting to see whether the player comes back.
+
+**The Weaver's Stall**
+
+The stall is locked with a simple padlock but through the gaps the player can see Yaa's work — lengths of cloth in complex geometric patterns, in colors that seem too vivid for the dust of the market. On the ground outside the stall, pressed into the earth by the heel of a boot, is a single spool of thread. It is tied off cleanly at one end. The other end runs under the door and disappears inside.
+
+A DC 13 Investigation check confirms: the spool is empty. Whatever was on it was used up.
+
+**The Crossroads Shrine**
+
+The shrine sits at the point where the three trade roads meet beneath the tree's canopy — a low stone platform surrounded by years of offerings in various states of age. Grain husks. Cloth scraps. Carved words. The stone itself has been worn smooth by decades of contact.
+
+The ritual:
+1. **An offering of grain** — any food will do; the intent matters, not the substance
+2. **An offering of cloth** — even a scrap; torn from clothing is acceptable; Kofi specifically said freely given, which means a scrap chosen deliberately, not ripped off thoughtlessly
+3. **A spoken name** — the player's character's own name, said aloud and without theater. Not a title. Not an epithet. The name.
+
+When all three offerings are made, the roots of the Silk-Cotton Tree begin to glow — that same candlelight-through-silk color, faint at first, then a warm amber. A gap appears between two of the largest roots: wide enough to step through, descending into darkness that is not frightening so much as simply very far down.
+
+**DM Note:** If the player tries to enter without completing the ritual — or completes it carelessly, without genuine intent — the gap does not appear. Kofi, if he sees this, will not comment on what the player did wrong. He will only say: *"Try again."* Players who do not perform the ritual cannot enter the spirit market. Players who perform it sloppily can enter but will find the Tangle somewhat more hostile (Stealth checks increase by 2, and the Phase Spider enters the fight immediately rather than being avoidable).
+
+---
+
+### Act 1 — The Three Tasks
+
+**Arrival in the Spirit Market**
+
+Descending through the roots takes no time at all and much longer than expected simultaneously. The player emerges into a place that is not a forest and not a room — a vast, softly lit space where the air smells of smoke and old cloth and something sweet and difficult to name. The "walls," such as they are, appear to be woven: enormous panels of silk stretched between structures that are more like suggestions of architecture than buildings.
+
+Webs are everywhere. They are not cobwebs — they are deliberate, geometric, beautiful. They catch the ambient light and hold it. The player is standing at the threshold of what feels like a marketplace that has been closed for the night: orderly, quietly waiting, watching.
+
+Anansi is already there.
+
+> *He is smaller than you expected. A well-dressed older man in immaculate robes — deep gold and brown and black, beautifully maintained — with round-lensed spectacles that do not quite sit straight on his face. He is sitting on a low stool near what appears to be a door made entirely of silk, and he is eating a piece of fruit that you cannot identify. He is looking at you the way a person looks at a difficult text they have been wanting to read for some time.*
+>
+> *"You took the slow route," he says. He does not sound displeased. He sounds like a man who has just confirmed a hypothesis.*
+
+Anansi will name the bargain's terms himself, without being asked. He does this efficiently and without theater:
+
+- Three tasks. Each one begins when the previous is completed. The player may forfeit at any point and leave with nothing.
+- The boon is granted as stated. He will ask the player to state their desire now, plainly, and he will repeat it back to confirm the wording. He is not trying to trap them in word-games — but the wording matters because he takes it seriously.
+- He controls this place. Not everything in it, but most of it. The player's own choices are their own.
+- He does not tell them what the three tasks are. He says only: *"The first one is about words. Are you ready?"*
+
+**DM Note — Playing Anansi:** Anansi is genuinely delighted by intelligence, cleverness, and honesty. He is quietly — not cruelly — disappointed by foolishness. He does not taunt. He does not threaten. He does not lie. He is attentive to everything the player does and says, and the DM should maintain this quality of attention throughout — Anansi has been alive for thousands of years and the player is the most interesting thing that has happened to him today. When he is amused, let it show. When he is not, let that show too — softly, without commentary.
+
+If a player asks Anansi a direct question, he gives a direct answer. He simply does not answer questions that were not asked. He will not volunteer information. He will not warn. This is not cruelty — it is respect. He is treating the player as someone capable of figuring things out.
+
+---
+
+#### Task 1 — The Task of Words
+
+**The Story-Vault**
+
+Anansi leads the player through the silk door into a library that has no visible end — shelves that run into darkness in every direction, floor after floor of them, each holding not books but clay tablets, rolled scrolls, folded cloth, wax-sealed jars, bundles of carved sticks. These are stories. Every story ever told. Anansi keeps them here.
+
+At the center of the library's first level, a floating lectern holds a massive ledger that turns its own pages. Near it is a shape that might be a person — still, featureless, made of something between shadow and lamplight.
+
+> *"The Archivist keeps the words," Anansi says. "It will give you three riddles. All three answers are in this room. You are not allowed to search the room."*
+>
+> *He finds a stool. He sits. He watches.*
+
+The Archivist speaks from everywhere at once — a calm, genderless voice at the same volume regardless of the listener's position. It will repeat each riddle once if asked. It will confirm correct and incorrect answers with complete neutrality. It will not give hints, confirm near-misses, or respond to questions other than the riddle itself. If a player attempts to use magic to find the answers — *Detect Thoughts*, *Legend Lore*, *Commune*, *Identify*, or any equivalent — the Archivist stops. The lectern closes. The Archivist says: *"The task was yours to answer. You have chosen to make it someone else's. Anansi sees this."* One **Swarm of Spiders** (CR 1/2) drops from the ceiling and the player must deal with it before the task resumes. The task is not failed — but Anansi has registered what happened.
+
+**The Three Riddles**
+
+---
+
+*Riddle the First:*
+
+> *"I was never born, but I had a mother. I will never die, but I can be killed. I travel farther than a running man but slower than a whisper. I weigh nothing, but I have collapsed kingdoms. What am I?"*
+
+**Answer: A story.**
+
+Acceptable variations: "a tale," "a legend," "a rumor." The Archivist is generous on phrasing; it is the concept that matters.
+
+*DM Note:* Players who answer "a lie" are close but incorrect — a lie cannot collapse a kingdom on its own, but a story that becomes believed can. If the player answers "a lie," the Archivist says only: *"A lie has no mother."* This is a hint, though not labeled as one.
+
+---
+
+*Riddle the Second:*
+
+> *"I give power over what I belong to. Speak me correctly, and a door opens. Speak me wrong, and nothing changes. Every living thing has one. Nothing gives itself one. What am I?"*
+
+**Answer: A name.**
+
+Acceptable variations: "a true name," "a proper name." The Archivist will not accept "a word" — the riddle specifies belonging and power in a way that is particular, not general.
+
+*DM Note:* This riddle echoes the ritual the player performed at the shrine (where they spoke their own name aloud). A player who connects these will feel clever, which is the intended effect. Do not point this out if they miss it — but do not prevent them from making the connection if they reach for it.
+
+---
+
+*Riddle the Third:*
+
+> *"I show you yourself, but I cannot see you. I remember everything I have witnessed, yet I forget the moment you look away. The more honest you are, the more clearly I show the truth. The more you deceive, the more I deceive in return. What am I?"*
+
+**Answer: Still water. A reflection. A mirror of water.**
+
+Acceptable variations: "a mirror," "a pool," "still water," "your reflection." The Archivist accepts all of these.
+
+*DM Note:* This riddle is designed to land differently in retrospect — after Task 3, a player who thinks back on it will realize it was describing the Heart Chamber. This is intentional. Anansi knew exactly what he was asking.
+
+---
+
+**Outcome of Task 1**
+
+- All three riddles answered correctly on the first attempt: Anansi nods once, stands, and leads the player out. He says: *"You listen well. Most people don't."*
+- One or two errors before the correct answer: Anansi says nothing but his amusement is a degree warmer.
+- Magic used to cheat: Anansi watches the player fight the spider swarm, then resumes without comment. In Task 3, the Dreamer's reflection is slightly clouded — the player will notice.
+- All three riddles answered correctly, but the player finds a demonstrably better answer to Riddle 3 than "still water" (DM's discretion): Anansi goes very still for a moment, then writes something in a small notebook that he keeps in his breast pocket. He says nothing about it. A second silk thread appears on the player's wrist at the campaign's end.
+
+---
+
+#### Task 2 — The Task of Hands
+
+**The Tangle**
+
+Anansi leads the player from the Story-Vault into a different part of the spirit market — one that feels less like a library and more like the inside of something alive. The architecture here is entirely web: two enormous pillars of solidified resin rise in the middle distance, and between them and across every available surface runs a labyrinth of silk threads ranging from hair-fine to wrist-thick. Some threads glow faintly. Some do not. Some move, slowly, like things breathing.
+
+> *"Somewhere in the Tangle, there is a lantern. It was brought here by someone who did not belong here and did not know what they were carrying. The lantern is running out of light. Retrieve it before it goes out entirely. That is the task."*
+>
+> *Anansi looks at the Tangle for a moment. "There are two paths in. The fast one is faster. The slow one is longer. Both reach the lantern."*
+>
+> *He does not say which path is which. He returns to the entrance and sits.*
+
+The player enters the Tangle. Read the following shortly after entry:
+
+> *The first thing you notice is that some of the threads do not move at all — not in the slight air current of your movement, not in response to anything. They are perfectly still and appear slightly dull. Other threads are alive in a way that is immediately obvious now that you know to look: a subtle tension, a micro-adjustment, a constant low vibration you can feel through the floor.*
+>
+> *You hear something. Not the lantern — something else. Quiet, and afraid, and trying not to be either.*
+
+**Finding Yaa**
+
+Yaa is visible from a junction roughly one third into the Tangle — a young woman sitting cross-legged in a small clear space, holding a lantern made of woven rushes and light. The lantern is burning low. She is not injured but she is exhausted and frightened.
+
+When she sees the player, she does not speak immediately — she evaluates them. If the player approaches carefully and makes no sudden movements, she speaks:
+
+> *"I can't put it down. If I put it down, the Tangle closes. I've been trying to find the way out for three days."*
+
+If asked, she will share what she has learned — and she has learned quite a lot, because Yaa is observant and good at her work:
+
+- **The still webs are dead.** Dead webs can be cut cleanly with a blade without any consequence — the Tangle does not register them.
+- **The living webs resist.** Pushing through a living web without going around it agitates the Tangle. Agitated Tangle sections send the Giant Spiders toward the disturbance.
+- **There are two paths to this point from the entrance.** One goes through the section where the Giant Spiders nest. The other goes around, but it is longer.
+
+**The Moral Choice**
+
+Yaa cannot navigate the Tangle alone with the lantern. She can either:
+1. **Go with the player** — taking the longer, safer route out together. This adds roughly ten minutes of travel to the task. It bypasses the Giant Spider nest entirely.
+2. **Wait here while the player takes the lantern out alone** — taking the fast route, which runs through the Giant Spider territory. The player returns to the entrance and can then go back for Yaa — but Yaa's lantern will be gone, and the Tangle in her section closes further around her the longer she waits. If the player does not return for her within the task (i.e., forgets or deprioritizes), she is still present but increasingly trapped, and extracting her becomes a second, harder operation.
+
+**DM Note:** Do not describe this as a moral choice. Present it practically, as a logistical question. The player chooses what they choose. The Tangle registers it. In the Heart Chamber, the Dreamer reflects it back — not as judgment, but as fact.
+
+**Encounters in the Tangle**
+
+---
+
+*The Giant Spiders (Fast Route or Careless Play)*
+
+Two **Giant Spiders** (CR 1 each) nest at the junction between the fast path and the central Tangle section. They are territorial, not aggressive — they will not pursue beyond their web territory, and they do not move toward visitors who approach quietly.
+
+- A player who uses Yaa's information about still webs can reduce the approach to a **DC 12 Stealth check** to pass without engaging. On a success, the spiders register the player as too small to bother with.
+- A player who alerts the spiders (failure on the Stealth check, or who moves through living webs carelessly) must fight or flee. Fleeing is always an option — the spiders will not pursue past the edge of their section.
+
+---
+
+*The Ettercap (Mandatory on the Route Toward Yaa)*
+
+One **Ettercap** (CR 2) guards the passage that leads to Yaa's location. It is territorial and has claimed the dead-web corridor leading to Yaa's clearing as its home. It waits in the web above the corridor entrance.
+
+- A player who succeeds on a **DC 14 Animal Handling or Nature check** can recognize the Ettercap's body language as territorial posturing rather than hunting behavior. Backing away slowly and approaching from a different angle (adding 5 minutes of navigation) avoids the fight entirely.
+- A player who enters the corridor without recognizing the warning signs triggers the Ettercap's attack. It is not trying to kill — it is trying to drive the intruder back out of its territory. Once the player retreats to the corridor mouth, the Ettercap will not follow.
+- A player who fights and defeats or drives back the Ettercap may pass freely.
+
+---
+
+*The Phase Spider (Final Obstacle Before the Lantern)*
+
+One **Phase Spider** (CR 3) inhabits the deepest section of the Tangle — the part closest to where the lantern was left, now held by Yaa. It shifts between planes erratically, making it difficult to track and dangerous to engage.
+
+- A player who has Yaa with them, and has paid attention to her knowledge about still webs, can observe the Phase Spider's phasing pattern: it always re-materializes at one of two anchor points, both of which are marked by unusual thickening in the dead web layer. A **DC 13 Perception check** identifies the timing and location of the next materialization. With this knowledge, the player can pass during the Phase Spider's Ethereal window without triggering it.
+- A player who engages the Phase Spider directly will find it retreats to the Ethereal Plane after taking 10 or more damage in a single round. It does not press a fight it is losing — it is not guarding anything, merely inhabiting the space.
+
+---
+
+**Outcome of Task 2**
+
+- Yaa escorted out via the long route: Anansi is at the entrance. He looks at Yaa for a moment, then at the player. He says only: *"Good."*
+- Yaa left behind and retrieved on a second pass: Anansi notes the additional time. He says nothing specific, but Yaa, when she emerges, is visibly shaken by the waiting. She thanks the player without quite meeting their eyes.
+- Yaa abandoned entirely: Anansi does not react with anger. He says: *"She is still in there. She will be fine eventually — the Tangle does not eat people who came in honestly. But she will be in there for some time."* He does not offer to go get her. He leaves the player with that. In the Heart Chamber, the Dreamer's reflection carries a specific weight that it would not have otherwise.
+- Lantern retrieved without entering combat at all (entirely by using Yaa's knowledge and careful navigation): Anansi looks at the player over his spectacles and says: *"You actually listened."* His amusement reaches something adjacent to respect.
+
+---
+
+#### Task 3 — The Task of Heart
+
+**The Heart Chamber**
+
+Anansi leads the player through a final silk curtain into a circular room. The ceiling is very high and lit by something sourceless and warm. The walls are entirely web — not threatening, not labyrinthine; simply complete. In the center of the room is a low platform, and near the platform there is a presence that cannot be looked at directly. It is luminous. It is warm. It shifts when the player shifts.
+
+This is **the Dreamer** — the accumulated residue of every sincere want that has ever been carried into this room.
+
+> *"The third task," Anansi says, "is also the simplest and the hardest. You have told me what you want. This room contains what you actually need. I am going to offer you a choice, and you are going to choose."*
+>
+> *He takes a chair near the wall. He does not look at you. He looks at the Dreamer.*
+>
+> *"Take your time."*
+
+**Mechanics**
+
+The Dreamer does not speak. It communicates in impressions. A player who approaches it and makes a **DC 12 Wisdom check** perceives — clearly, wordlessly — the distinction between what they stated when they first arrived and what they actually came here needing.
+
+This is where the DM uses the answer given before the session: *"What does your character secretly want — the thing they'd never say out loud?"*
+
+The DM does not narrate this distinction for the player. They describe the impression the Dreamer creates — a feeling, an image, a sudden clarity — and let the player identify what they're feeling. The distinction between the stated boon and the secret want will be immediately obvious to any player who gave an honest answer before the session. If the player gave a flip or unconsidered answer, this moment will still land — but more simply.
+
+**Anansi's Offer**
+
+After the player has stood with the Dreamer for a moment, Anansi speaks:
+
+> *"You can have exactly what you asked for. I will give it to you precisely as stated. It will work. It will be real."*
+>
+> *A pause.*
+>
+> *"Or you can tell me what you actually came here for. Out loud. Not to me — I already know. For your own ears. And I will give you that instead."*
+>
+> *"Both are available. Only one of them is why you made this trip."*
+
+The player chooses.
+
+**DM Note:** The DM should not pressure the player toward either choice. Both choices are narratively valid and have meaningful outcomes. The choice that requires the player to say the true thing out loud is the harder one — not mechanically, but emotionally — and that difficulty is the point of the task. Anansi is not testing whether the player chooses correctly. He is testing whether the player knows themselves well enough to choose at all.
+
+**If the player chooses the stated boon (literally):** They receive what they asked for, exactly as worded, with no rider or trick. Anansi does not cheat. If the player has been at least honest in the other two tasks, the boon functions well. If they cheated in Task 1 or abandoned Yaa in Task 2, the boon functions — but there is a visible flaw, small and precise, that Anansi will name without commentary.
+
+**If the player chooses the true boon (saying it aloud):** The player must speak the actual answer — what they secretly want — out loud. In character. Anansi listens. The Dreamer brightens. The player receives the full boon, shaped to what was spoken. This version works better, lasts longer, and costs something: the admission itself.
+
+**If the player attacks Anansi, forfeits, or refuses to choose:** Anansi closes the Heart Chamber and returns the player to the spirit market entrance. He says: *"Come back when you know what you want."* The player may re-enter and restart from Task 1. Once. If they do it a second time, Anansi is simply not there when they arrive. The door beneath the Silk-Cotton Tree does not glow. Kofi, when the player emerges, says nothing. He does not have to.
+
+---
+
+### Act 2 — The Twist
+
+With the boon granted, Anansi stands and leads the player back through the silk curtain and across the spirit market toward the passage that leads out. He does not rush. He speaks while walking.
+
+> *"The door into this place has been open since you arrived in Kumasi's Edge."*
+>
+> *A pause, to let that land.*
+>
+> *"The tasks were not between you and your boon. They were between you and the question you arrived here asking. Which was not, as it happens, 'what do I want.' That question was the one you said out loud. The one you came here asking — the one the Dreamer heard when you walked through my door — was something else."*
+>
+> *He stops at the passage entrance. He looks at you directly. For the first time, his spectacles are sitting straight.*
+>
+> *"'Who am I?' That is the question. Every person who comes here is asking it. None of them say so. The tasks show me the answer — or show them. Whichever is useful."*
+>
+> *He steps aside to let you pass.*
+>
+> *"The boon is yours. You earned it by being someone worth giving it to."*
+
+He does not add to this. He does not explain further. If the player asks any follow-up question, he answers it directly — and then steps aside again.
+
+---
+
+### Act 3 — The Resolution
+
+**Emerging from the Passage**
+
+The player climbs back through the roots and emerges beneath the Silk-Cotton Tree. Night has fallen in Kumasi's Edge — not a frightening night but a clear one, warm, full of crickets and the smell of cook fires. The glow in the roots is already fading.
+
+**Elder Kofi** is exactly where the player left him, sitting on the low stone bench beside the tree's largest root, with a small lantern that has burned about halfway down.
+
+He does not ask how it went. He reads the answer from the player's face and responds accordingly.
+
+| Player Outcome | What Kofi Does |
+|---|---|
+| Full integrity — Yaa escorted out, honest in all three tasks | Kofi stands slowly, looks at the player for a moment, and says: *"She's home?"* When the player confirms: *"Thank you."* Nothing more. He goes inside. The cook fire is still going. |
+| Mixed outcome — some shortcuts, Yaa returned eventually | Kofi nods. He looks tired in a way that is more complicated than relief. He says: *"I'll go see her."* He pauses at his door. *"You did enough."* |
+| Yaa abandoned | Kofi is quiet for a long time. Then he says: *"She'll come out eventually. He won't keep her."* He is not accusing the player. He simply knows his god. He goes inside alone. |
+| Player forfeited or received a diminished boon | Kofi says only: *"Come back when you're ready. He keeps the door open a long time for people who almost understood."* |
+
+**The Silk Thread**
+
+When the player moves away from the tree, they notice — or will notice in a moment — a single thread of spider silk tied around their wrist. It was not there before. It is not restrictive. It will not come off.
+
+If the player asks Kofi about it: *"That means he found you interesting."*
+
+If the player goes back to the passage to ask Anansi: the glow in the roots is gone. There is no way back in tonight.
+
+The thread is permanent. What it means mechanically is left to the DM's discretion — it is suggested as a ribbon of luck, a marker of Anansi's notice, or a key that will mean something in a later campaign. Anansi will never explain it. He never does.
+
+If the player found a genuinely superior answer to one of the Archivist's riddles — one that the DM judges to be demonstrably more elegant than the expected answer — a second thread is present alongside the first when the player checks their wrist. Anansi wrote something in his small notebook. This is the highest compliment he offers, and it is entirely silent.
+
+---
+
+## Encounter Reference
+
+### Task 1 — The Story-Vault
+
+| Encounter | Trigger | Notes |
+|---|---|---|
+| Swarm of Spiders (CR 1/2) | Player uses divination/information magic to cheat | Drops from ceiling; does not pursue outside the vault; task resumes after |
+
+### Task 2 — The Tangle
+
+| Encounter | Location | Trigger | Non-Combat Resolution |
+|---|---|---|---|
+| Giant Spider × 2 (CR 1) | Spider nest junction | Fast route or careless web movement | DC 12 Stealth; bypass by taking the slow route |
+| Ettercap × 1 (CR 2) | Corridor to Yaa's clearing | Mandatory approach (both routes converge here) | DC 14 Animal Handling or Nature to recognize territorial behavior and detour |
+| Phase Spider × 1 (CR 3) | Deep Tangle, near lantern site | Entering the Phase Spider's territory | DC 13 Perception to time the phase windows and pass safely |
+
+### Anansi (If Combat Is Forced)
+
+Anansi does not fight. On the first attack, he vanishes to the ceiling. He waits. If attacked again, the tasks reset from the beginning and he reappears at the spirit market entrance — with the bargain still open, and his amusement somewhat diminished. If attacked a third time, he disappears. The spirit market is empty. The passage closes. The player emerges beneath the tree with nothing. Kofi is still on his bench. He says: *"He gets bored of the ones who only know one answer to every question."* A full stat block for Anansi is provided in creatures.md if the DM requires it.
+
+---
+
+## Resolution Outcomes
+
+| Choices Made | Boon Received | Kofi's Reaction | The Silk Thread |
+|---|---|---|---|
+| Honest in all three tasks; Yaa escorted out; true boon chosen | Full boon, precisely what was needed; best possible form | Quiet, complete relief | One thread; possibly two if a superior riddle answer was given |
+| Honest in Tasks 1 and 3; Yaa escorted out; stated boon chosen | Full stated boon; no flaw; functions exactly as promised | Quiet satisfaction | One thread |
+| Cheated in Task 1; Yaa escorted out; true boon chosen | True boon with a small visible flaw that Anansi names once | Mixed; a little worried | One thread, thinner than it should be |
+| All tasks honest; Yaa abandoned; stated boon chosen | Stated boon; functions correctly; slight sense of incompleteness | Quietly disappointed; Kofi says *"you did enough"* | One thread |
+| Cheated in Task 1; Yaa abandoned; stated boon chosen | Stated boon with a specific flaw Anansi names precisely | Kofi says nothing; goes to find Yaa alone | One thread; noticeably dull |
+| Forfeited | No boon | *"Come back when you're ready"* | No thread |
+
+---
+
+## Key Rewards
+
+| Item | Source | Properties |
+|---|---|---|
+| **The Boon** | Anansi — granted at the end of Task 3 | Determined by the player's stated or true desire; the DM should work with the player to shape this into a mechanical benefit appropriate to level 5–7. Suggested forms: a permanent spell effect, a bounded wish-like outcome, a lost thing restored, a door opened. The boon should feel personal, not generic. |
+| **Thread of the Spider King** | Always present after a completed session | The silk thread on the player's wrist. Mechanically: advantage on saving throws against deception and illusion effects (Anansi's signature — the ability to see the difference between what is shown and what is true). Always on; cannot be removed; weight: nothing. |
+| **Second Thread** | Only if the player gave a superior riddle answer | An additional thread. Mechanically: once per long rest, the player may ask the DM one yes/no question about a creature, situation, or object and receive a truthful answer. Anansi heard the better answer and wrote it down. The second thread is his acknowledgment that the world owes that player a little more transparency than usual. |
+| **Yaa's Cloth** | Given by Yaa if she was escorted out | A small folded square of woven cloth in Yaa's distinctive geometric style, in colors that are slightly too vivid to be natural. Functions as a component for any weaving or creation magic, or simply as an item worth more than it looks. If the player ever needs shelter in a storm, the cloth — held over the head — does not let a drop through. Yaa wove it the night she got home. She left it at the player's camp without knocking. |
+| **Kofi's Blessing** | Given by Kofi if Yaa was returned safely | Not a magic item. A sentence, spoken plainly: *"If you are ever in this village again, my house is yours."* This is not nothing. In the world of this campaign, it means something. |
+
+---
+
+## Key NPCs
+
+| Name | Role | Location |
+|---|---|---|
+| **Anansi** | The trickster god; architect of every task and every omission; the test and the door | All acts — the Spirit Market |
+| **Elder Kofi** | Village elder; guide before entry; moral anchor at resolution; Yaa's grandfather | Act 0 and Act 3 — Kumasi's Edge |
+| **Yaa** | Missing weaver; Task 2 complication; moral choice made flesh | Act 1 Task 2 — The Tangle |
+| **The Archivist** | Voice-spirit; riddle-keeper; Anansi's instrument in the Story-Vault | Act 1 Task 1 — The Story-Vault |
+| **The Dreamer** | Accumulated spirit of honest want; Task 3 moral center | Act 1 Task 3 — The Heart Chamber |
+
+---
+
+## DM Notes — Running This One-Shot
+
+**The One Cardinal Rule**
+
+Anansi is not the obstacle. He is the test. Every single moment in this campaign flows from that distinction. When in doubt about how Anansi would react to something, ask: *does this reveal something true about the player?* If yes, Anansi is interested. If no, he is politely waiting for the player to do something more interesting.
+
+**On the Riddles**
+
+The three riddles in Task 1 have correct answers, but the DM should apply generous interpretation to answers that arrive at the same concept through different phrasing. What the Archivist tests is inference and understanding, not vocabulary. If a player gives an answer that is genuinely better — more precise, more complete, more elegant — than the expected one, count it as correct and note it for the second-thread reward at the end.
+
+Do not allow answers that are simply guesses, lists, or process-of-elimination without reasoning. If a player says "I don't know — is it a mirror?" that is not the same as arriving at "a reflection in still water" through the riddle's internal logic. The difference will be obvious in play.
+
+**On Yaa**
+
+The moral weight of Yaa is most effective if it arrives entirely through practical presentation. The DM should never frame the choice of escorting her vs. leaving her as a moral question. It is simply: *here is a person who cannot leave without your help, and here is the route with her, and here is the route without her.* The player makes the choice they make. The campaign witnesses it without comment.
+
+In the Heart Chamber, the Dreamer's reflection does not judge. It simply shows the player who they were in that moment. This is the point.
+
+**On the Ending**
+
+The ending of this campaign should feel quiet rather than triumphant. The player got what they came for — or a version of it that is more honest than what they thought they came for — and now they are standing under a tree in a village at night with a thread on their wrist. The DM should resist the urge to add fanfare. The best endings in Anansi's tradition are the ones where the lesson takes a moment to settle, and then you realize it was there the whole time.
+
+Let the silence do its work.
