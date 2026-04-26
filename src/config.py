@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     )
 
     # ── LLM provider ─────────────────────────────────────────────────────────
-    llm_provider: str = "openai"
-    """Which LLM backend to use: 'openai' or 'ollama'."""
+    llm_provider: str = "ollama"
+    """Which LLM backend to use: 'ollama' (default) or 'openai' (Phase 13)."""
 
     openai_api_key: str = ""
     """Required when llm_provider='openai'."""

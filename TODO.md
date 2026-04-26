@@ -46,22 +46,22 @@ Get the repository structure, tooling, and configuration in place before writing
 
 Build the provider layer for local inference via Ollama. The entire system runs locally before any external API is introduced. OpenAI support is added later in Phase 13.
 
-- [ ] `src/llm/base.py`
-  - [ ] Define abstract `LLMProvider` base class with a single required method: `complete(messages: list[dict], **kwargs) -> str`
-  - [ ] Define a `ModelInfo` dataclass (`name`, `context_window`, `provider`)
-- [ ] `src/llm/ollama_provider.py`
-  - [ ] Implement `OllamaProvider(LLMProvider)` using the OpenAI-compatible Ollama endpoint (`{OLLAMA_BASE_URL}/v1/chat/completions`) via the `openai` SDK with a custom `base_url`
-  - [ ] Implement `list_models() -> list[ModelInfo]` — calls `GET {OLLAMA_BASE_URL}/api/tags` and returns available local models
-  - [ ] Check that the Ollama service is reachable at startup; print a helpful error if not
-  - [ ] Respect the context window reported by `ollama show <model>` (query at startup and store in settings)
-- [ ] `src/llm/factory.py`
-  - [ ] `create_provider(settings: Settings) -> LLMProvider` — read `LLM_PROVIDER` and return the correct implementation; raise a clear not-yet-supported error if the provider is anything other than `ollama`
-  - [ ] If `DM_MODEL` is not set, call `list_models()` and present an interactive selection menu using `rich`
-- [ ] Write unit tests in `tests/test_llm.py`
-  - [ ] Test that `factory.create_provider` returns `OllamaProvider` when `LLM_PROVIDER=ollama`
-  - [ ] Test that an unsupported provider value raises a clear, user-friendly error
-  - [ ] Mock the HTTP response and test `OllamaProvider.list_models` parses the tags response correctly
-  - [ ] Test that a missing Ollama service raises a clear, user-friendly error
+- [x] `src/llm/base.py`
+  - [x] Define abstract `LLMProvider` base class with a single required method: `complete(messages: list[dict], **kwargs) -> str`
+  - [x] Define a `ModelInfo` dataclass (`name`, `context_window`, `provider`)
+- [x] `src/llm/ollama_provider.py`
+  - [x] Implement `OllamaProvider(LLMProvider)` using the OpenAI-compatible Ollama endpoint (`{OLLAMA_BASE_URL}/v1/chat/completions`) via the `openai` SDK with a custom `base_url`
+  - [x] Implement `list_models() -> list[ModelInfo]` — calls `GET {OLLAMA_BASE_URL}/api/tags` and returns available local models
+  - [x] Check that the Ollama service is reachable at startup; print a helpful error if not
+  - [x] Respect the context window reported by `ollama show <model>` (query at startup and store in settings)
+- [x] `src/llm/factory.py`
+  - [x] `create_provider(settings: Settings) -> LLMProvider` — read `LLM_PROVIDER` and return the correct implementation; raise a clear not-yet-supported error if the provider is anything other than `ollama`
+  - [x] If `DM_MODEL` is not set, call `list_models()` and present an interactive selection menu using `rich`
+- [x] Write unit tests in `tests/test_llm.py`
+  - [x] Test that `factory.create_provider` returns `OllamaProvider` when `LLM_PROVIDER=ollama`
+  - [x] Test that an unsupported provider value raises a clear, user-friendly error
+  - [x] Mock the HTTP response and test `OllamaProvider.list_models` parses the tags response correctly
+  - [x] Test that a missing Ollama service raises a clear, user-friendly error
 
 ---
 
