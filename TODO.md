@@ -118,26 +118,59 @@ Load the full ruleset for the configured game edition and make it available to t
 
 ---
 
-## Phase 5 — Memory System
+## Phase 5 — Memory System (Graph RAG)
 
-Build persistent memory so the DM retains full knowledge of the player's journey across sessions.
+Build a Graph RAG memory system so the DM retains rich, structured knowledge of the player's journey across sessions and retrieves only the most relevant context per turn — keeping prompts compact regardless of campaign length.
 
-- [ ] `src/dm/memory.py`
-  - [ ] Define `MemoryManager` class scoped to a campaign (reads/writes to `memory/<campaign_name>/`)
-  - [ ] `session.json` — store the full conversation history as a list of `{role, content}` messages
-  - [ ] `journal.md` — append a human-readable summary after each significant encounter
-  - [ ] `load_session()` — load existing session history from disk on startup
-  - [ ] `save_message(role, content)` — append a new message to session history and persist to disk
-  - [ ] `append_journal_entry(entry: str)` — write a dated entry to the journey journal
-  - [ ] `get_journal_summary()` → return the full journal text for inclusion in the LLM context
-  - [ ] `campaign_progress` — integer or section pointer tracking how far into the campaign book the player has reached
-  - [ ] `advance_progress(to_section: int)` — update and persist the campaign progress pointer
-  - [ ] `reset()` — wipe session history (but not the journal) to start a fresh session
-  - [ ] `full_reset()` — wipe both session history and journal (new run of the campaign)
+### Data model
+
+- **Nodes** represent named entities in the world: `Character`, `Location`, `Creature`, `Item`, `Faction`, `Event`, `Revelation`
+- **Edges** represent directed relationships between entities: `MET`, `VISITED`, `DEFEATED`, `OWNS`, `KNOWS`, `IS_PART_OF`, `CAUSED`, `DISCOVERED`, `ALLIED_WITH`, `HOSTILE_TO`
+- Every node and edge carries a `turn` timestamp (integer message index) and an optional `notes` string
+- Storage: `memory/<campaign_name>/graph.json` — a plain JSON adjacency list; swappable to SQLite in a later phase
+- Short-term context: `memory/<campaign_name>/session.json` — the last N raw `{role, content}` messages (configurable window; default 20)
+- Progress pointer: `memory/<campaign_name>/progress.json` — current scene index
+
+### Tasks
+
+- [ ] Add `networkx` to `requirements.txt` and `pyproject.toml`
+- [ ] `src/dm/memory/graph_store.py`
+  - [ ] Define `EntityType` and `RelationType` enums
+  - [ ] Define `Entity` dataclass: `id` (slug), `type: EntityType`, `label: str`, `notes: str`, `first_seen_turn: int`
+  - [ ] Define `Relationship` dataclass: `source_id`, `relation: RelationType`, `target_id`, `notes: str`, `turn: int`
+  - [ ] `GraphStore` class backed by a `networkx.DiGraph`
+    - [ ] `add_entity(entity: Entity)` — upsert; update `notes` if the entity already exists
+    - [ ] `add_relationship(rel: Relationship)` — add directed edge; skip duplicate relation on same turn
+    - [ ] `get_subgraph(seed_ids: list[str], depth: int = 2) -> str` — BFS from seed nodes up to `depth` hops; serialise the result as a structured text block suitable for LLM context
+    - [ ] `save(path: Path)` / `load(path: Path)` — persist/restore the full graph as JSON
+- [ ] `src/dm/memory/extractor.py`
+  - [ ] `extract_entities_and_relations(text: str, provider: LLMProvider, turn: int) -> tuple[list[Entity], list[Relationship]]`
+    - [ ] Build a terse extraction prompt asking the LLM to return JSON listing new entities and relationships found in `text`
+    - [ ] Parse and validate the JSON response; silently skip malformed entries
+    - [ ] Called once per DM response — cheap single-pass extraction
+- [ ] `src/dm/memory/session_store.py`
+  - [ ] `SessionStore` class scoped to a campaign path
+  - [ ] `load()` — read `session.json` from disk on startup; return empty list if absent
+  - [ ] `append(role: str, content: str)` — add message and persist; trim to the last N messages (default 20, configurable via `SESSION_WINDOW` setting)
+  - [ ] `messages() -> list[dict]` — return the current window as `[{role, content}, ...]`
+  - [ ] `clear()` — wipe the session window (keeps graph)
+- [ ] `src/dm/memory/manager.py`
+  - [ ] `MemoryManager` class — composes `GraphStore`, `SessionStore`, and progress pointer
+  - [ ] `load(campaign_name: str)` — load graph, session, and progress from disk
+  - [ ] `record_turn(player_input: str, dm_response: str, provider: LLMProvider)` — append both messages to session, run extractor on dm_response, upsert graph
+  - [ ] `get_context(current_text: str) -> str` — extract seed entity names from `current_text`, retrieve the relevant subgraph, return a formatted block for the system prompt
+  - [ ] `advance_progress(to_section: int)` — update and persist the scene pointer
+  - [ ] `campaign_progress` property — current section index
+  - [ ] `reset_session()` — wipe session window only; graph is preserved
+  - [ ] `full_reset()` — wipe session window and graph (new run of the campaign)
+- [ ] Add `SESSION_WINDOW` (default `20`) to `src/config.py` and `.env.example`
 - [ ] Write unit tests in `tests/test_memory.py`
-  - [ ] Test that session history persists and reloads correctly
-  - [ ] Test that journal entries accumulate correctly
-  - [ ] Test progress tracking advances monotonically
+  - [ ] Test `GraphStore.add_entity` upserts correctly (duplicate id updates notes)
+  - [ ] Test `GraphStore.get_subgraph` returns nodes within the specified depth and no further
+  - [ ] Test `SessionStore` trims to the configured window size
+  - [ ] Test `SessionStore` persists and reloads correctly across instances
+  - [ ] Test `MemoryManager.advance_progress` is monotonically increasing (cannot go backwards)
+  - [ ] Mock the `LLMProvider` and test `extract_entities_and_relations` handles malformed JSON without raising
 
 ---
 
@@ -158,7 +191,8 @@ Build the LLM-powered Dungeon Master that reads context and generates responses.
     - [ ] Include character sheet (formatted clearly for the LLM)
     - [ ] Include creature reference
     - [ ] Include the revealed portion of the campaign book (via `spoiler_guard`)
-    - [ ] Include the full journey journal from memory
+    - [ ] Include the retrieved graph memory context (via `memory.get_context()`) — entities and relationships relevant to the current turn, not a full history dump
+    - [ ] Append the short-term session window (last N messages) as prior conversation context
   - [ ] Keep system prompt within a configurable token budget (avoid context overflow)
   - [ ] Log a warning if the context approaches the model's context window limit
   - [ ] Update `NarrativeState` passed to `get_relevant_rules` based on current session state (e.g., swap to `COMBAT` when combat begins)
@@ -171,8 +205,8 @@ Build the LLM-powered Dungeon Master that reads context and generates responses.
     3. For each tag, call the dice engine with the correct `Die` and modifier; replace the tag with the real result inline
     4. Inject resolved roll results as a system message and call the LLM once more to generate the narrative from actual results
     5. Return the final narrated response
+  - [ ] After each response, call `memory.record_turn(player_input, dm_response, provider)` — this appends to the session window and updates the knowledge graph in one call
   - [ ] After each response, check if the response implies a new section has been reached and advance the progress pointer
-  - [ ] After significant narrative beats (combat resolved, key NPC met, location discovered), call `memory.append_journal_entry()`
   - [ ] Implement retry logic with exponential backoff for API errors (delegates to provider implementation)
 - [ ] Write unit tests in `tests/test_dm.py`
   - [ ] Mock the `LLMProvider` interface and test that the system prompt is built correctly
@@ -223,11 +257,13 @@ Wire everything together into a working text-based adventure session.
   - [ ] Accept player input via `input()` prompt styled with `rich`
   - [ ] Handle special commands:
     - [ ] `/quit` or `/exit` — save and exit gracefully
-    - [ ] `/journal` — print the journey journal to the terminal
+    - [ ] `/journal` — render a human-readable view of the knowledge graph (entities grouped by type, with their relationships) using `rich`
     - [ ] `/status` — display current character stats and inventory
     - [ ] `/save` — explicitly save session state (auto-save also happens after every message)
-    - [ ] `/reset` — confirm and reset the current session (keep journal)
+    - [ ] `/reset` — confirm and wipe the session window; knowledge graph is preserved
+    - [ ] `/fullreset` — confirm and wipe both session window and knowledge graph (restart the campaign from scratch)
     - [ ] `/roll <expression>` — let the player roll their own dice at any time (e.g., `/roll d20+3`, `/roll 2d6`); display the result in the same styled format as DM rolls
+    - [ ] `/graph <entity>` — look up a specific entity in the knowledge graph and display its relationships
     - [ ] `/help` — list available commands
   - [ ] After each DM response, if dice were rolled, render each `RollResult` in a styled panel (using `rich`) showing: die type badge, individual roll values, modifier, and bold total — displayed between the player's input and the DM's narration
   - [ ] Handle `KeyboardInterrupt` (Ctrl+C) gracefully — save and exit
@@ -240,8 +276,9 @@ Wire everything together into a working text-based adventure session.
 - [ ] Manual end-to-end test with the example campaign:
   - [ ] Play through at least 3 scenes of the example campaign
   - [ ] Verify spoiler guard does not reveal future scenes
-  - [ ] Verify journal accumulates entries correctly
-  - [ ] Quit and resume — verify the DM remembers everything
+  - [ ] Verify knowledge graph accumulates entities and relationships correctly after each turn
+  - [ ] Run `/journal` and confirm entities render correctly
+  - [ ] Quit and resume — verify the DM remembers NPCs, locations, and events from the previous session via graph retrieval
 
 ---
 
@@ -256,7 +293,7 @@ Harden the system before adding features.
 - [ ] Add a `--reset` CLI flag to reset session state at startup
 - [ ] Add a `--provider` CLI flag to override `LLM_PROVIDER` from the command line (Ollama-only until Phase 13; passing `openai` will raise a clear not-yet-supported error)
 - [ ] Add a `--model` CLI flag to override `DM_MODEL` from the command line (e.g., quickly switch local models)
-- [ ] Implement token counting before sending to the LLM — truncate oldest session messages if context is too large while preserving the system prompt and journal; use model context window from `ModelInfo`
+- [ ] Implement token counting before sending to the LLM — the graph retrieval step naturally bounds long-term memory size; also truncate the oldest session window messages if the total context still exceeds the limit, preserving the system prompt and the retrieved graph context; use model context window from `ModelInfo`
 - [ ] At Ollama startup, query the selected model's context length via `ollama show <model>` and store it in settings
 - [ ] Add a configurable `DM_TEMPERATURE` setting (default `0.8`) for response creativity
 - [ ] Add a configurable `MAX_TOKENS` setting for DM response length
@@ -361,5 +398,5 @@ Add support for cloud-hosted OpenAI models. The system must be fully functional 
 - **Rules authority vs. narrative flexibility**: Decide the default enforcement level — strict RAW, RAW with common sense exceptions, or narrative-first. Expose this as a `DM_RULES_MODE` config setting (`strict` / `flexible`).
 - **Campaign book sectioning**: The spoiler guard needs a consistent way to detect section boundaries in the `.txt` file. Decide on a required format (e.g., lines starting with `##` or `SCENE:`) before writing any real campaigns.
 - **Context window management**: For long campaigns, the full campaign book will exceed the model's context window. Decide whether to use chunking + retrieval (RAG) or summarization. RAG is likely the right long-term answer.
-- **Memory summarization**: After many sessions, the session history will grow large. Implement automatic summarization of older messages into the journal to keep the context window manageable.
+- **Memory system**: ~~Decided~~ — Graph RAG approach (Phase 5). Long-term memory is stored as a knowledge graph of entities and relationships (`graph.json`). Short-term context is the last N session messages (`session.json`). At each turn, `MemoryManager.get_context()` retrieves the relevant subgraph via BFS from seed entities in the current text and injects it into the system prompt — no full-history dump, no summarisation needed.
 - **Progress tracking granularity**: Decide whether "progress" is tracked by scene number, by a keyword in the campaign book, or by a running percentage. Scene headers are the cleanest option.
