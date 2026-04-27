@@ -34,6 +34,25 @@ The system runs entirely locally via [Ollama](https://ollama.com/). A pluggable 
 
 ---
 
+## Screenshots
+
+### Startup — Campaign Selection
+![Campaign selection screen showing the welcome banner and available campaigns table](images/personal_dm_start.png)
+
+*The welcome banner and campaign selection menu on first launch.*
+
+### Campaign Loading — Summary Panel
+![Campaign summary panel displayed after selecting a campaign](images/personal_dm_loading_campaign.png)
+
+*After selecting a campaign, a full summary panel is rendered before the adventure begins.*
+
+### In-Session — DM Narration
+![Example of the Dungeon Master narrating a scene in the terminal](images/personal_dm_example_output.png)
+
+*The DM narrates scenes in a styled panel. Dice results appear in their own panel above the narration whenever a roll is made.*
+
+---
+
 ## Features
 
 ### Core
@@ -266,10 +285,24 @@ If `DM_MODEL` is not set, the startup menu will list your available local models
 ### Running
 
 ```bash
-python src/main.py
+python -m src.main
 ```
 
-You will be prompted to select a campaign. Once selected, the DM will load all campaign files, initialize memory, and begin the adventure.
+You will be prompted to select a campaign. Once selected, the DM will load all campaign files, initialize memory, and begin the adventure. See the [Screenshots](#screenshots) section above for examples of what to expect.
+
+#### In-session commands
+
+| Command | Description |
+|---|---|
+| `/help` | List all available commands |
+| `/status` | Display character stats and inventory |
+| `/journal` | Show all entities extracted by the knowledge graph |
+| `/graph <entity>` | Look up a specific entity and its relationships |
+| `/roll <expr>` | Roll dice at any time (e.g. `/roll d20+3`, `/roll 2d6`) |
+| `/save` | Explicitly save the session state |
+| `/reset` | Wipe the session window (graph is preserved) |
+| `/fullreset` | Wipe session window and knowledge graph (restart campaign) |
+| `/quit` or `/exit` | Save and exit |
 
 ---
 
