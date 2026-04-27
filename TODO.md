@@ -302,7 +302,135 @@ Harden the system before adding features.
 
 ---
 
-## Phase 10 — Voice Interface
+## Phase 10 — Streaming Output & Player Interrupt
+
+Replace the “Thinking...” spinner with live word-by-word output from the LLM. Allow the player to interrupt the DM mid-response, just as you might cut off a speaker at the table.
+
+- [ ] `src/llm/base.py`
+  - [ ] Add optional `stream(messages: list[dict], **kwargs) -> Iterator[str]` method to `LLMProvider`; provide a default implementation that delegates to `complete()` for providers that do not implement streaming
+- [ ] `src/llm/ollama_provider.py`
+  - [ ] Implement `stream()` using `stream=True` on the OpenAI-compatible client; yield string tokens as they arrive from the model
+- [ ] `src/dm/dungeon_master.py`
+  - [ ] Add `respond_stream(player_input: str) -> Iterator[str]` — same pipeline as `respond()` but yields tokens incrementally
+  - [ ] Buffer the incoming stream to detect and resolve complete `[ROLL: ...]` tags before yielding downstream; accumulate partial tags at chunk boundaries until the closing `]` is received, then perform the roll and emit the resolved text
+  - [ ] Record the full (or partial, if interrupted) response in memory regardless of whether the stream was cut short
+- [ ] `src/interface/cli.py`
+  - [ ] Replace the “Thinking...” spinner with a live streaming display using `rich.live`; print each token as it arrives
+  - [ ] Implement player interrupt: spawn a background thread that waits for any keyboard input while the DM is streaming; when triggered, send a cancel signal to the stream iterator and display a `[interrupted]` indicator
+  - [ ] Ensure partial DM responses are formatted and stored correctly after interruption
+  - [ ] Ensure dice roll panels still render correctly when rolls occur mid-stream
+- [ ] Write unit tests
+  - [ ] Test that `OllamaProvider.stream()` yields multiple incremental string chunks
+  - [ ] Test that dice tags split across chunk boundaries are buffered and resolved correctly
+  - [ ] Test that an interrupted response is still passed to `MemoryManager.record_turn`
+
+---
+
+## Phase 11 — DM Personality System
+
+Give the player six distinct Dungeon Master personalities to choose from at startup. Each personality changes the DM’s narrative voice, verbosity, and disposition through a targeted system prompt directive.
+
+### Personalities
+
+| Name | Tone | Verbosity | Description |
+|---|---|---|---|
+| **The Sage** | Kind | Balanced | Measured, wise, and balanced. Thoughtful pacing. Kind but honest about consequences. The reliable default. |
+| **The Chronicler** | Kind | Verbose | Literary narrator. Richly detailed scenes with evocative prose — every shadow and scent accounted for. Never rushes. |
+| **The Bard** | Neutral | Verbose | Theatrical and charismatic. Every NPC voiced with dramatic flair. Leans into humor, unexpected twists, and memorable moments. |
+| **The Tactician** | Neutral | Concise | Precise and rules-focused. Efficient narration, strict mechanical accuracy, fair challenge above all. |
+| **The Warden** | Harsh | Concise | Austere and unforgiving. Terse narration, permanent consequences, real danger. The world does not forgive mistakes. |
+| **The Mentor** | Kind | Balanced | Patient, encouraging, and beginner-friendly. Explains rules clearly, celebrates good decisions, and guides gently. |
+
+### Tasks
+
+- [ ] `src/dm/personality.py`
+  - [ ] Define `DMPersonality` dataclass: `name: str`, `description: str`, `system_prompt_directive: str`, `verbosity: Literal["concise", "balanced", "verbose"]`, `tone: Literal["harsh", "neutral", "kind"]`
+  - [ ] Define `PERSONALITIES: list[DMPersonality]` — the six named personalities above, each with a full `system_prompt_directive` paragraph describing the expected DM behaviour
+  - [ ] Implement `get_personality(name: str) -> DMPersonality` — case-insensitive lookup; raise a clear, user-friendly error for unknown names
+  - [ ] Default personality is **The Sage**
+- [ ] `src/dm/context_builder.py`
+  - [ ] Accept an optional `personality: DMPersonality | None` parameter
+  - [ ] Inject `personality.system_prompt_directive` as a `## DM Personality` block immediately after the core DM persona section in the system prompt
+- [ ] `src/main.py`
+  - [ ] After campaign selection, display the personality menu (name, tone, verbosity, one-line description) using `rich`
+  - [ ] Prompt the player to choose; default to **The Sage** on empty input
+  - [ ] Pass the selected personality through to `DungeonMaster` and `context_builder`
+- [ ] `src/interface/cli.py`
+  - [ ] Add `/personality` command — display current personality, list all six options, prompt to switch; new personality takes effect from the next DM response
+  - [ ] Display the active personality name in the session header banner
+- [ ] Write unit tests in `tests/test_dm.py`
+  - [ ] Test that each personality’s `system_prompt_directive` appears in the built system prompt
+  - [ ] Test that `get_personality` raises a clear error for unknown names
+  - [ ] Test that omitting a personality defaults to **The Sage**
+
+---
+
+## Phase 12 — Web Interface
+
+A browser-based interface served locally via FastAPI. Supports all session commands, streams DM output word-by-word via WebSocket, and displays the DM avatar and campaign scene images.
+
+- [ ] Add `fastapi`, `uvicorn[standard]`, `websockets` to `requirements.txt`
+- [ ] `src/interface/web.py`
+  - [ ] FastAPI app instance; serve static frontend at `GET /`
+  - [ ] `GET /campaigns` — return available campaigns as JSON
+  - [ ] `GET /personalities` — return all DM personalities as JSON
+  - [ ] `POST /session/start` — accept `{campaign, personality}`, initialise a `DungeonMaster` session, return a `session_id`
+  - [ ] `WS /session/{id}/chat` — WebSocket endpoint for the chat loop
+    - [ ] Accept `{type: "message", content: "..."}` — player turn
+    - [ ] Accept `{type: "interrupt"}` — cancel the current stream
+    - [ ] Send `{type: "token", content: "..."}` — one streamed token
+    - [ ] Send `{type: "roll", result: {...}}` — dice roll panel data
+    - [ ] Send `{type: "scene_image", url: "..."}` — campaign image to display
+    - [ ] Send `{type: "done"}` — stream complete
+  - [ ] `POST /session/{id}/command` — handle `/status`, `/journal`, `/graph`, `/roll`, `/reset`, `/fullreset`, `/save`; return structured JSON
+  - [ ] `GET /session/{id}/avatar` — return the avatar image for the current personality
+  - [ ] `GET /campaign/{name}/image/{filename}` — serve images from `images/<campaign_name>/`; validate the resolved path stays within the images directory to prevent directory traversal
+- [ ] `src/interface/static/`
+  - [ ] `index.html` — single-page layout: chat panel (centre), DM avatar (left sidebar), campaign image display (right sidebar), collapsible character status panel
+  - [ ] `style.css` — dark fantasy-themed styling with atmospheric colour palette
+  - [ ] `app.js` — WebSocket client; renders streaming tokens word by word; handles interrupt button; displays dice roll panels; loads and fades in avatar and campaign images
+- [ ] `src/main.py`
+  - [ ] Add `--interface` CLI flag (`cli` / `web`, default `cli`)
+  - [ ] When `--interface web`: start `uvicorn` on `localhost:8000` and open the browser automatically
+- [ ] Write integration tests
+  - [ ] Test `GET /campaigns` returns the expected list
+  - [ ] Test `GET /personalities` returns all six personalities
+  - [ ] Test `POST /session/start` returns a valid session ID with a mocked `DungeonMaster`
+  - [ ] Test WebSocket message/response cycle with a mocked `DungeonMaster`
+  - [ ] Test that `GET /campaign/{name}/image/{filename}` rejects path traversal attempts
+
+---
+
+## Phase 13 — DM Avatar & Campaign Image Display
+
+Give the Dungeon Master a face. Each personality has a distinct avatar image. A display panel in the web interface shows scene images from the campaign’s `images/` directory at key narrative moments.
+
+### DM Avatar
+
+- [ ] Create `images/avatars/` directory; add placeholder avatar images for each personality (`the-sage.png`, `the-chronicler.png`, `the-bard.png`, `the-tactician.png`, `the-warden.png`, `the-mentor.png`) and a `default.png` fallback
+- [ ] `src/dm/avatar.py`
+  - [ ] `get_avatar_path(personality: DMPersonality) -> Path` — resolve `images/avatars/<personality-slug>.png`; fall back to `images/avatars/default.png` if not present
+- [ ] Web interface: display the active avatar in the left sidebar; swap the image via a `{type: "avatar_updated"}` WebSocket message when the player changes personality mid-session
+- [ ] CLI (stretch): detect terminal graphics protocol support (Sixel / Kitty) and render the avatar inline using `rich-pixels` or equivalent; fall back gracefully to displaying only the personality name
+
+### Campaign Image Display
+
+- [ ] Establish naming convention: campaign images stored under `images/<campaign_name>/`, filenames are lowercase slugs matching location or scene names (e.g., `tavern.png`, `forest-clearing.png`, `goblin-king.png`)
+- [ ] `src/dm/image_resolver.py`
+  - [ ] `resolve_scene_image(dm_response: str, campaign_name: str) -> Path | None` — tokenise the DM response, compare lowercase words against image filename stems in `images/<campaign_name>/`; return the best-matching path or `None`
+  - [ ] Validate the resolved path is within `images/<campaign_name>/` to prevent directory traversal
+- [ ] Web interface: when `resolve_scene_image` returns a path, send `{type: "scene_image", url: "/campaign/{name}/image/{filename}"}` over the WebSocket; the frontend fades in the image in the right display panel
+- [ ] CLI: print a subtle hint line below the DM response (e.g., `  📷  forest-clearing.png`) when a matching image is found
+- [ ] Write unit tests
+  - [ ] Test `get_avatar_path` returns the correct path for each personality
+  - [ ] Test `get_avatar_path` falls back to `default.png` for an unknown personality
+  - [ ] Test `resolve_scene_image` matches a keyword from the DM response to an image filename
+  - [ ] Test `resolve_scene_image` returns `None` when no image matches
+  - [ ] Test `resolve_scene_image` rejects path traversal in the `campaign_name` parameter
+
+---
+
+## Phase 14 — Voice Interface
 
 Add speech-to-text and text-to-speech so the player can speak to the DM and hear responses.
 
@@ -320,7 +448,7 @@ Add speech-to-text and text-to-speech so the player can speak to the DM and hear
 
 ---
 
-## Phase 11 — Multi-Character & Party Support
+## Phase 15 — Multi-Character & Party Support
 
 Extend the system to support a full party of adventurers.
 
@@ -332,7 +460,7 @@ Extend the system to support a full party of adventurers.
 
 ---
 
-## Phase 12 — Campaign Authoring Tooling
+## Phase 16 — Campaign Authoring Tooling
 
 Make it easy to create new campaigns in the required format.
 
@@ -347,34 +475,69 @@ Make it easy to create new campaigns in the required format.
 
 ---
 
-## Phase 13 — OpenAI Provider Integration
+## Phase 17 — External LLM Provider Support
 
-Add support for cloud-hosted OpenAI models. The system must be fully functional with Ollama before this phase begins.
+Add support for cloud-hosted LLM providers as an optional alternative to Ollama. The system must be fully functional with Ollama before this phase begins. All providers share the same `LLMProvider` interface — the DM agent requires no changes.
+
+### Supported Providers
+
+| Provider | Setting value | Notes |
+|---|---|---|
+| **OpenAI** | `openai` | GPT-4o, GPT-4o-mini, o1, o3 series; requires `OPENAI_API_KEY` |
+| **Anthropic** | `anthropic` | Claude 3.5 Sonnet, Claude 3 Haiku; requires `ANTHROPIC_API_KEY` |
+| **Google Gemini** | `gemini` | Gemini 1.5 Pro, Gemini 1.5 Flash; requires `GEMINI_API_KEY` |
+
+Any provider that exposes an OpenAI-compatible `/v1/chat/completions` endpoint (e.g., Together AI, Groq, Fireworks) can be added with minimal effort by subclassing the OpenAI provider and pointing it at a custom `base_url`.
+
+### Tasks
 
 - [ ] `src/llm/openai_provider.py`
   - [ ] Implement `OpenAIProvider(LLMProvider)` using the `openai` Python SDK
   - [ ] Read `OPENAI_API_KEY` and `DM_MODEL` from settings
   - [ ] Pass `temperature`, `max_tokens` from settings
+  - [ ] Implement `stream()` using `stream=True` on the OpenAI client (Phase 10 streaming contract)
   - [ ] Implement retry with exponential backoff for rate limit and transient API errors
-- [ ] Update `src/llm/factory.py` to support `LLM_PROVIDER=openai` — return `OpenAIProvider`
-- [ ] Update `src/main.py` to handle OpenAI at startup: verify `OPENAI_API_KEY` is present; remove the Ollama-only guard
-- [ ] Confirm `src/config.py` `OPENAI_API_KEY` validation triggers correctly when `LLM_PROVIDER=openai`
-- [ ] Update the `--provider` CLI flag (Phase 9) to accept `openai` as a valid value
+- [ ] `src/llm/anthropic_provider.py`
+  - [ ] Implement `AnthropicProvider(LLMProvider)` using the `anthropic` Python SDK
+  - [ ] Read `ANTHROPIC_API_KEY` and `DM_MODEL` from settings
+  - [ ] Map the `messages` list format to Anthropic's API (system message → `system` param; user/assistant turns → `messages`)
+  - [ ] Implement `stream()` using the Anthropic streaming API
+  - [ ] Implement retry with exponential backoff for rate limit and transient API errors
+- [ ] `src/llm/gemini_provider.py`
+  - [ ] Implement `GeminiProvider(LLMProvider)` using the `google-generativeai` Python SDK
+  - [ ] Read `GEMINI_API_KEY` and `DM_MODEL` from settings
+  - [ ] Map the `messages` list to Gemini's `ChatSession` / `generate_content` format
+  - [ ] Implement `stream()` using `stream=True` on `generate_content`
+  - [ ] Implement retry with exponential backoff for quota and transient API errors
+- [ ] `src/llm/factory.py`
+  - [ ] Update `create_provider()` to return the correct implementation for `openai`, `anthropic`, and `gemini`; raise a clear not-yet-supported error for any other value
+- [ ] `src/config.py`
+  - [ ] Add `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` — each validated only when the corresponding provider is selected
+  - [ ] Add provider-specific model defaults (e.g., `gpt-4o` for OpenAI, `claude-3-5-sonnet-20241022` for Anthropic, `gemini-1.5-pro` for Gemini)
+- [ ] Update `.env.example` with all three API key fields and their required provider values
+- [ ] Update `src/main.py` to remove the Ollama-only guard; validate that the required API key for the selected provider is present before proceeding
+- [ ] Update the `--provider` CLI flag (Phase 9) to accept `openai`, `anthropic`, and `gemini` as valid values
+- [ ] Add optional provider SDK dependencies to `requirements.txt` with comments indicating they are only needed for the respective provider (`anthropic`, `google-generativeai`)
 - [ ] Write unit tests in `tests/test_llm.py`
-  - [ ] Test that `factory.create_provider` returns `OpenAIProvider` when `LLM_PROVIDER=openai`
-  - [ ] Mock the OpenAI SDK and test `OpenAIProvider.complete` formats messages correctly
-  - [ ] Test that a missing `OPENAI_API_KEY` raises a clear, user-friendly error
-- [ ] End-to-end smoke test: play the opening scene of the example campaign via OpenAI; confirm output parity with Ollama behaviour
+  - [ ] Test that `factory.create_provider` returns the correct class for each supported provider value
+  - [ ] Mock the OpenAI SDK and test `OpenAIProvider.complete` and `stream` format messages correctly
+  - [ ] Mock the Anthropic SDK and test `AnthropicProvider.complete` maps messages to the Anthropic format correctly
+  - [ ] Mock the Gemini SDK and test `GeminiProvider.complete` maps messages to the Gemini format correctly
+  - [ ] Test that a missing API key raises a clear, user-friendly error for each provider
+  - [ ] Test that an unsupported provider value raises a clear, user-friendly error
+- [ ] End-to-end smoke test: play the opening scene of the example campaign via each provider; confirm output parity with Ollama behaviour
 
 ---
 
+
+
 ## Stretch Goals & Future Ideas
 
-- [ ] Web UI — a browser-based chat interface instead of the terminal
+- [ ] ~~Web UI~~ — now Phase 12
 - [ ] Campaign marketplace — a way to share and download community campaigns
-- [ ] DM personality modes — choose between strict RAW (Rules As Written), narrative-first, or beginner-friendly
+- [ ] ~~DM personality modes~~ — now Phase 11
 - [ ] Visual dice rolling — replace the plain-text `rich` dice panel with an animated dice roll rendered in the terminal (ASCII art spinning die) or in a GUI window; the animation plays during the roll and settles on the final value
-- [ ] DM avatar — a character portrait representing the Dungeon Master displayed alongside narration in a GUI or web UI; could be static art or a lightly animated idle loop; the avatar reacts to narrative state (combat = menacing expression, calm scene = neutral/inviting)
+- [ ] ~~DM avatar~~ — now Phase 13
 - [ ] Image generation — generate scene illustrations using an image model at key story moments
 - [ ] Ambient audio — play background music and sound effects that match the current scene
 - [ ] Export session as a story — convert the journey journal into a formatted narrative document
@@ -390,7 +553,7 @@ Add support for cloud-hosted OpenAI models. The system must be fully functional 
 
 ## Known Decisions to Revisit
 
-- **LLM provider abstraction**: ~~Decided~~ — implement a `src/llm/` layer with an abstract `LLMProvider` interface and an `OllamaProvider` (Phase 2). `OpenAIProvider` is added in Phase 13 once the system is proven locally. The factory reads `LLM_PROVIDER` from config. The DM agent always works through the interface and never references a specific backend.
+- **LLM provider abstraction**: ~~Decided~~ — implement a `src/llm/` layer with an abstract `LLMProvider` interface and an `OllamaProvider` (Phase 2). External cloud providers (OpenAI, Anthropic, Gemini) are added in Phase 17 once the system is proven locally. The factory reads `LLM_PROVIDER` from config. The DM agent always works through the interface and never references a specific backend.
 - **Ollama model selection**: If `DM_MODEL` is unset and provider is `ollama`, query `ollama list` at startup and present an interactive picker. Store the selected model name in the running config (not written back to `.env`).
 - **Rules in context strategy**: For 5e, the full SRD rules text is modest enough to fit in a large context window alongside a campaign. Start with full-rules inclusion per turn. For larger rulesets (Pathfinder, etc.) or smaller context window models, implement RAG over the rules directory as a follow-up.
 - **NarrativeState tracking**: The context builder needs to know the current state (combat/exploration/social) to select relevant rules sections. Decide whether this is tracked explicitly by the DM agent or inferred from the LLM's last response.

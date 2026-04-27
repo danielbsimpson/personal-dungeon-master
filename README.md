@@ -2,7 +2,7 @@
 ![](images/personal_dm_image_gothic_clay.png)
 An AI-powered Dungeon Master that reads from structured campaign files and guides a player through a tabletop RPG adventure via a conversational text interface — with voice interaction planned for a future phase.
 
-Runs **entirely locally via [Ollama](https://ollama.com/)** — no API keys, no cloud calls, no data leaving your machine. OpenAI API support is planned for a later phase once the system is proven fully offline. Built for players who want full privacy and offline play on their own hardware.
+Runs **entirely locally via [Ollama](https://ollama.com/)** — no API keys, no cloud calls, no data leaving your machine. Support for external LLM providers (OpenAI, Anthropic, Gemini, and others) is planned for a later phase once the system is proven fully offline. Built for players who want full privacy and offline play on their own hardware.
 
 ---
 
@@ -18,7 +18,15 @@ Runs **entirely locally via [Ollama](https://ollama.com/)** — no API keys, no 
 | 6 | DM agent — context builder, spoiler guard | ✅ Complete (26 tests) |
 | 7 | Dice engine — `Die` enum, `RollRequest`/`RollResult`, `roll()`, tag parsing, substitution | ✅ Complete (37 tests) |
 | 8 | CLI text interface (`src/interface/cli.py`) and main entry point (`src/main.py`) | ✅ Complete |
-| 9+ | Polish, voice, multi-character, OpenAI, etc. | 🔲 Not started |
+| 9 | Polish & reliability — CLI flags, token counting, logging | 🔲 Not started |
+| 10 | Streaming word-by-word output and player interrupt | 🔲 Not started |
+| 11 | DM personality system — six named personalities | 🔲 Not started |
+| 12 | Web interface (FastAPI + WebSocket streaming) | 🔲 Not started |
+| 13 | DM avatar and campaign image display window | 🔲 Not started |
+| 14 | Voice interface — speech-to-text and text-to-speech | 🔲 Not started |
+| 15 | Multi-character & party support | 🔲 Not started |
+| 16 | Campaign authoring tooling | 🔲 Not started |
+| 17 | External LLM provider support (OpenAI, Anthropic, Gemini, etc.) | 🔲 Not started |
 
 **154 tests passing** across Phases 1–7. Phase 8 is covered by manual end-to-end testing (no unit tests).
 
@@ -30,7 +38,7 @@ Personal Dungeon Master is a locally-run AI assistant that acts as your Dungeon 
 
 The DM is designed to be faithful to the campaign source material while never revealing future events prematurely. It adapts to player choices within the scope of the written adventure, maintaining narrative coherence at all times.
 
-The system runs entirely locally via [Ollama](https://ollama.com/). A pluggable LLM provider layer is in place so OpenAI API support can be added later without changing any application logic, but the system is designed and tested against local models first.
+The system runs entirely locally via [Ollama](https://ollama.com/). A pluggable LLM provider layer is in place so external cloud providers (OpenAI, Anthropic, Gemini, and others) can be added later without changing any application logic, but the system is designed and tested against local models first.
 
 ---
 
@@ -65,20 +73,26 @@ The system runs entirely locally via [Ollama](https://ollama.com/). A pluggable 
 - **Character sheet awareness** — the DM tracks player stats, inventory, abilities, and progression
 - **Creature reference** — the DM uses creature data for accurate combat narration and encounter descriptions
 - **Local model support** — works with any model pulled into Ollama (e.g., `llama3.1`, `mistral-nemo`, `qwen2.5`, `deepseek-r1`); runs entirely offline on your own GPU hardware
-- **Pluggable LLM providers** — provider abstraction is in place; OpenAI API support is added in a later phase once the system is proven locally
+- **Pluggable LLM providers** — provider abstraction is in place; external cloud providers (OpenAI, Anthropic, Gemini, and others) can be added in Phase 17 without changing any application logic
 - **Full 5e rules knowledge** — the DM is grounded in the complete D&D 5th Edition System Reference Document (SRD); it applies rules correctly for combat, spellcasting, ability checks, conditions, and more
 - **Rules-accurate adjudication** — when a player attempts an action, the DM applies the correct 5e mechanics (attack rolls, saving throws, skill checks, spell effects) without the player needing to look anything up
 - **Integrated dice engine** — the DM rolls all dice using a Python RNG engine with cryptographically seeded randomness; every attack roll, damage roll, saving throw, and skill check uses the correct die type (d4, d6, d8, d10, d12, d20, d100) with appropriate modifiers applied automatically
 - **Transparent dice results** — every roll is displayed to the player in the terminal before the DM narrates the outcome, showing the die type, raw roll, modifier, and total
 
 ### Planned
+- **Streaming word-by-word output** — replace the "Thinking..." spinner with live token-by-token display as the LLM generates; the DM's words appear one at a time just as a real speaker would deliver them
+- **Player interrupt** — while the DM is streaming its response, the player can press a key to cut the DM off mid-sentence; the partial response is recorded and the next player input is accepted immediately
+- **DM personality system** — six named personality profiles that each change how the DM narrates, adjudicates, and engages with the player; see [DM Personalities](#dm-personalities) for the full roster
+- **Web interface** — a browser-based chat interface served locally via FastAPI; streams DM output word-by-word via WebSocket, displays the DM avatar, and shows campaign scene images in a visual panel
+- **DM avatar** — a distinct character portrait for each DM personality, displayed prominently in the web interface sidebar
+- **Campaign image display** — a visual panel in the web interface that automatically surfaces images from the campaign's `images/` directory when the DM narrates a matching location or scene
 - **Voice input** — speak your actions to the DM using speech-to-text
 - **Voice output** — the DM narrates back using text-to-speech with a consistent voice persona
 - **Save & resume** — save the exact state of an adventure and resume from any point
 - **Multiple players** — support for a party of characters in a single campaign
 - **Custom campaign creation** — tooling to help author new campaigns in the required format
 - **Additional ruleset editions** — extend the rules system beyond 5e to support D&D 3.5e, D&D 4e, Pathfinder 1e/2e, and other TTRPGs
-- **DM avatar** — a visual character portrait representing the Dungeon Master, displayed in a GUI or web UI alongside narration
+- **External LLM providers** — optional cloud backend support (OpenAI, Anthropic, Gemini, and others) via a common provider interface; the system runs fully offline with Ollama and can optionally delegate to a cloud model when preferred
 - **Animated visual dice** — a rendered dice-roll animation shown to the player when the DM rolls, replacing the plain text result with a visual display
 
 ---
@@ -382,6 +396,21 @@ The DM is instructed to:
 - Advance the story only as fast as the player drives it
 - Emit `[ROLL: ...]` tags for every dice roll — never invent results
 - Keep narration consistent with facts stored in memory (the Graphiti knowledge graph supplies these as context)
+
+---
+
+## DM Personalities
+
+At session startup, the player chooses a Dungeon Master personality. The selection shapes the DM's narrative voice, level of detail, and disposition for the entire session. The personality is injected as a behavioral directive in the system prompt and can be changed mid-session with `/personality`.
+
+| Personality | Tone | Verbosity | Description |
+|---|---|---|---|
+| **The Sage** | Kind | Balanced | Measured, wise, and balanced. Thoughtful pacing. Kind but honest about consequences. The reliable default. |
+| **The Chronicler** | Kind | Verbose | Literary narrator. Richly detailed scenes with evocative prose — every shadow, scent, and texture accounted for. Never rushes. |
+| **The Bard** | Neutral | Verbose | Theatrical and charismatic. Every NPC voiced with dramatic flair. Leans into humor, unexpected twists, and memorable moments. |
+| **The Tactician** | Neutral | Concise | Precise and rules-focused. Narration is efficient and clear. Mechanical accuracy and fair challenge above all else. |
+| **The Warden** | Harsh | Concise | Austere and unforgiving. Terse narration, permanent consequences, real danger. The world does not forgive mistakes. |
+| **The Mentor** | Kind | Balanced | Patient, encouraging, and beginner-friendly. Explains rules clearly, celebrates good decisions, and guides gently. |
 
 ---
 
