@@ -8,6 +8,7 @@ discovery.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import httpx
@@ -17,6 +18,8 @@ from src.llm.base import LLMProvider, ModelInfo
 
 if TYPE_CHECKING:
     from src.config import Settings
+
+log = logging.getLogger(__name__)
 
 _DEFAULT_CONTEXT_WINDOW = 4_096
 
@@ -88,6 +91,11 @@ class OllamaProvider(LLMProvider):
         """
         self._model = model
         self.context_window = self._fetch_context_window(model)
+        log.info(
+            "OllamaProvider configured: model='%s' context_window=%d",
+            model,
+            self.context_window,
+        )
 
     def _fetch_context_window(self, model: str) -> int:
         """
@@ -132,10 +140,23 @@ class OllamaProvider(LLMProvider):
                 "No model configured on OllamaProvider. "
                 "Call configure_model() before complete()."
             )
+        temperature = kwargs.get("temperature", self._temperature)
+        max_tokens = kwargs.get("max_tokens", self._max_tokens)
+        log.debug(
+            "OllamaProvider.complete: model=%s messages=%d temperature=%s max_tokens=%d",
+            self._model,
+            len(messages),
+            temperature,
+            max_tokens,
+        )
         response = self._client.chat.completions.create(
             model=self._model,
             messages=messages,  # type: ignore[arg-type]
-            temperature=kwargs.get("temperature", self._temperature),
-            max_tokens=kwargs.get("max_tokens", self._max_tokens),
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
-        return response.choices[0].message.content or ""
+        reply = response.choices[0].message.content or ""
+        log.debug(
+            "OllamaProvider.complete: reply length=%d chars", len(reply)
+        )
+        return reply

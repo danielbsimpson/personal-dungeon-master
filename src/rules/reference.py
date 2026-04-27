@@ -6,11 +6,13 @@ Public API
 ----------
 NarrativeState          Enum driving section selection
 get_all_rules(ref)      Full rules text — use for small context windows
-get_relevant_rules(ref, state)  State-aware subset — use for large campaigns
+get_relevant_rules(ref, state, context)  State-aware subset — use for large campaigns
+search_rules(ref, topic)  Keyword search across all rule sections
 """
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 
 from src.rules.loader import RulesReference
@@ -123,3 +125,49 @@ def get_relevant_rules(
     for name in section_names:
         parts.append(f"## Rules: {name.upper()}\n\n{ref.sections[name].strip()}")
     return "\n\n---\n\n".join(parts)
+
+
+def search_rules(ref: RulesReference, topic: str) -> str:
+    """
+    Search all rules sections for content matching *topic*.
+
+    Splits each section into chunks at heading boundaries and returns all
+    chunks that mention the topic keyword (case-insensitive).  Used by the
+    ``/rules`` CLI command so the player can look up a specific mechanic
+    (e.g. ``/rules grapple``) mid-session.
+
+    Parameters
+    ----------
+    ref:
+        The loaded :class:`RulesReference`.
+    topic:
+        The keyword or short phrase to search for.
+
+    Returns
+    -------
+    str
+        Matching rule excerpts, each preceded by its section name, separated
+        by dividers.  Returns a "not found" message if no matches exist.
+    """
+    if not topic.strip():
+        return "No topic provided. Usage: /rules <topic>  e.g. /rules grapple"
+
+    topic_lower = topic.strip().lower()
+    matches: list[str] = []
+
+    for section_name in ref.section_names:
+        text = ref.sections[section_name]
+        # Split at headings (##, ###, ####) while keeping the heading itself.
+        chunks = re.split(r"(?=\n#{2,4} )", text)
+        for chunk in chunks:
+            if topic_lower in chunk.lower():
+                header = f"[{section_name.upper()}]"
+                matches.append(f"{header}\n{chunk.strip()}")
+
+    if not matches:
+        return (
+            f"No rules found for '{topic}'.\n"
+            f"Available sections: {', '.join(ref.section_names)}"
+        )
+
+    return "\n\n---\n\n".join(matches)

@@ -286,19 +286,19 @@ Wire everything together into a working text-based adventure session.
 
 Harden the system before adding features.
 
-- [ ] Add a `--edition` CLI flag to override `GAME_EDITION` from the command line (e.g., `python src/main.py --edition 5e`)
-- [ ] Add a `/rules` CLI command to look up a specific rules topic mid-session (e.g., `/rules grapple`)
-- [ ] Add input validation for all campaign file parsing (graceful error messages, not stack traces)
-- [ ] Add a `--campaign` CLI flag to skip the selection menu (`python src/main.py --campaign lost-mines`)
-- [ ] Add a `--reset` CLI flag to reset session state at startup
-- [ ] Add a `--provider` CLI flag to override `LLM_PROVIDER` from the command line (Ollama-only until Phase 13; passing `openai` will raise a clear not-yet-supported error)
-- [ ] Add a `--model` CLI flag to override `DM_MODEL` from the command line (e.g., quickly switch local models)
-- [ ] Implement token counting before sending to the LLM — the graph retrieval step naturally bounds long-term memory size; also truncate the oldest session window messages if the total context still exceeds the limit, preserving the system prompt and the retrieved graph context; use model context window from `ModelInfo`
-- [ ] At Ollama startup, query the selected model's context length via `ollama show <model>` and store it in settings
-- [ ] Add a configurable `DM_TEMPERATURE` setting (default `0.8`) for response creativity
-- [ ] Add a configurable `MAX_TOKENS` setting for DM response length
-- [ ] Write a `validate-campaign` helper script that checks a campaign folder for correctness and reports any issues
-- [ ] Add logging to a `logs/` directory (info-level for session events, debug-level for LLM calls)
+- [x] Add a `--edition` CLI flag to override `GAME_EDITION` from the command line (e.g., `python src/main.py --edition 5e`)
+- [x] Add a `/rules` CLI command to look up a specific rules topic mid-session (e.g., `/rules grapple`)
+- [x] Add input validation for all campaign file parsing (graceful error messages, not stack traces)
+- [x] Add a `--campaign` CLI flag to skip the selection menu (`python src/main.py --campaign lost-mines`)
+- [x] Add a `--reset` CLI flag to reset session state at startup
+- [x] Add a `--provider` CLI flag to override `LLM_PROVIDER` from the command line (Ollama-only until Phase 13; passing `openai` will raise a clear not-yet-supported error)
+- [x] Add a `--model` CLI flag to override `DM_MODEL` from the command line (e.g., quickly switch local models)
+- [x] Implement token counting before sending to the LLM — the graph retrieval step naturally bounds long-term memory size; also truncate the oldest session window messages if the total context still exceeds the limit, preserving the system prompt and the retrieved graph context; use model context window from `ModelInfo`
+- [x] At Ollama startup, query the selected model's context length via `ollama show <model>` and store it in settings
+- [x] Add a configurable `DM_TEMPERATURE` setting (default `0.8`) for response creativity
+- [x] Add a configurable `MAX_TOKENS` setting for DM response length
+- [x] Write a `validate-campaign` helper script that checks a campaign folder for correctness and reports any issues
+- [x] Add logging to a `logs/` directory (info-level for session events, debug-level for LLM calls)
 
 ---
 

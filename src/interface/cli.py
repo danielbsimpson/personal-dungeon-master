@@ -37,6 +37,8 @@ from src.dice.die import RollResult
 from src.dice.roller import format_result, parse_player_expression, roll
 from src.dm.dungeon_master import DungeonMaster
 from src.dm.memory.manager import MemoryManager
+from src.rules.loader import RulesReference
+from src.rules.reference import search_rules
 
 console = Console()
 
@@ -58,6 +60,7 @@ _COMMANDS: dict[str, str] = {
     "/fullreset": "Wipe session window AND knowledge graph (restart campaign)",
     "/roll <expr>": "Roll dice  e.g. /roll d20+3  /roll 2d6",
     "/graph <entity>": "Look up an entity in the knowledge graph",
+    "/rules <topic>": "Look up a rules topic  e.g. /rules grapple  /rules concentration",
 }
 
 
@@ -285,6 +288,26 @@ def _cmd_roll(expr: str) -> None:
     print_roll_results([result])
 
 
+def _cmd_rules(rules: RulesReference, topic: str) -> None:
+    if not topic.strip():
+        console.print(
+            "[red]Usage: /rules <topic>  e.g.  /rules grapple  /rules concentration[/red]"
+        )
+        return
+
+    result = search_rules(rules, topic.strip())
+    console.print()
+    console.print(
+        Panel(
+            Markdown(result),
+            title=f"[bold cyan]Rules: {topic.title()}[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2),
+        )
+    )
+    console.print()
+
+
 def _confirm(prompt: str) -> bool:
     return Confirm.ask(f"[bold yellow]{prompt}[/bold yellow]", default=False)
 
@@ -294,7 +317,11 @@ def _confirm(prompt: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-async def run_session(dm: DungeonMaster, memory: MemoryManager) -> None:
+async def run_session(
+    dm: DungeonMaster,
+    memory: MemoryManager,
+    rules: Optional[RulesReference] = None,
+) -> None:
     """
     Run the interactive DM session until the player quits.
 
@@ -305,7 +332,11 @@ async def run_session(dm: DungeonMaster, memory: MemoryManager) -> None:
     memory:
         Loaded :class:`~src.dm.memory.manager.MemoryManager` (same instance
         used by the DM).
+    rules:
+        Loaded :class:`~src.rules.loader.RulesReference` — used by the
+        ``/rules`` command.  Falls back to ``dm.rules`` when not supplied.
     """
+    rules = rules or dm.rules
     character = dm.campaign.character
 
     # Opening narration
@@ -348,6 +379,14 @@ async def run_session(dm: DungeonMaster, memory: MemoryManager) -> None:
                 entity = raw[7:].strip()
                 with console.status("[magenta]Searching graph…[/magenta]", spinner="dots"):
                     await _cmd_graph(memory, entity)
+                continue
+
+            if lower.startswith("/rules "):
+                _cmd_rules(rules, raw[7:].strip())
+                continue
+
+            if lower == "/rules":
+                _cmd_rules(rules, "")
                 continue
 
             if lower.startswith("/roll "):

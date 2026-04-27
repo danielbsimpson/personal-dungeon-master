@@ -23,6 +23,14 @@ class ModelInfo:
 class LLMProvider(ABC):
     """Common interface for every LLM backend."""
 
+    context_window: int = 4_096
+    """
+    The maximum number of tokens this model supports in a single request
+    (input + output combined).  Subclasses should update this after the model
+    is configured (e.g. by querying the provider API).  Used by the DM agent
+    to set an accurate system-prompt token budget.
+    """
+
     @abstractmethod
     def complete(self, messages: list[dict], **kwargs) -> str:
         """

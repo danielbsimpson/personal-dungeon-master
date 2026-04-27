@@ -76,6 +76,74 @@ class DungeonMaster:
         self._last_roll_results: list = []
 
     # ------------------------------------------------------------------
+    # Token budget helpers
+    # ------------------------------------------------------------------
+
+    def _estimate_tokens(self, text: str) -> int:
+        """Approximate token count: 1 token ≈ 4 characters."""
+        return max(1, len(text) // 4)
+
+    def _system_prompt_budget(self) -> int:
+        """
+        Compute the token budget for the system prompt.
+
+        Reserves ``max_tokens`` for the model's reply and a 256-token safety
+        margin, leaving the rest for the system prompt.  Falls back to a
+        conservative default if the provider does not expose a numeric
+        context_window (e.g. in tests with mock providers).
+        """
+        try:
+            cw = int(self._llm.context_window)
+        except (TypeError, ValueError):
+            cw = 4_096
+        return max(1_000, cw - self._settings.max_tokens - 256)
+
+    def _trim_session_to_budget(
+        self,
+        session_msgs: list[dict],
+        system_prompt: str,
+        current_input: str,
+    ) -> list[dict]:
+        """
+        Drop the oldest session messages until the full message list fits
+        within the model's context window.
+
+        Preserves the system prompt and the current player input; trims
+        user/assistant pairs from the front of the session window.
+        """
+        reserved_output = self._settings.max_tokens
+        margin = 256
+        try:
+            cw = int(self._llm.context_window)
+        except (TypeError, ValueError):
+            cw = 4_096
+        total_budget = max(1_000, cw - reserved_output - margin)
+
+        fixed_tokens = self._estimate_tokens(system_prompt) + self._estimate_tokens(current_input)
+
+        msgs = list(session_msgs)
+        original_len = len(msgs)
+
+        while msgs:
+            session_tokens = sum(self._estimate_tokens(m["content"]) for m in msgs)
+            if fixed_tokens + session_tokens <= total_budget:
+                break
+            # Drop the oldest pair (user + assistant) to preserve turn coherence.
+            msgs = msgs[2:] if len(msgs) >= 2 else msgs[1:]
+
+        if len(msgs) < original_len:
+            log.info(
+                "Trimmed session window from %d to %d messages to fit context budget "
+                "(context_window=%d, estimated usage=%d tokens).",
+                original_len,
+                len(msgs),
+                self._llm.context_window,
+                fixed_tokens + sum(self._estimate_tokens(m["content"]) for m in msgs),
+            )
+
+        return msgs
+
+    # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
@@ -98,6 +166,7 @@ class DungeonMaster:
             memory=self._memory,
             state=self._state,
             current_text="",
+            token_budget=self._system_prompt_budget(),
         )
         messages = [
             {"role": "system", "content": system_prompt},
@@ -156,11 +225,15 @@ class DungeonMaster:
             memory=self._memory,
             state=self._state,
             current_text=player_input,
+            token_budget=self._system_prompt_budget(),
         )
 
+        session_msgs = self._trim_session_to_budget(
+            self._memory.session_messages(), system_prompt, player_input
+        )
         messages = (
             [{"role": "system", "content": system_prompt}]
-            + self._memory.session_messages()
+            + session_msgs
             + [{"role": "user", "content": player_input}]
         )
 
@@ -230,3 +303,8 @@ class DungeonMaster:
     def campaign(self) -> "ParsedCampaign":
         """The parsed campaign data for this session."""
         return self._campaign
+
+    @property
+    def rules(self) -> "RulesReference":
+        """The loaded rules reference for this session."""
+        return self._rules
