@@ -16,11 +16,11 @@ Runs **entirely locally via [Ollama](https://ollama.com/)** — no API keys, no 
 | 4 | Rules system — loader, reference, NarrativeState | ✅ Complete (25 tests) |
 | 5 | Memory graph — Graphiti + Kuzu | ✅ Complete (8 tests) |
 | 6 | DM agent — context builder, spoiler guard | ✅ Complete (26 tests) |
-| 7 | Dice engine | 🔲 Not started |
-| 8 | CLI text interface and main loop | 🔲 Not started |
+| 7 | Dice engine — `Die` enum, `RollRequest`/`RollResult`, `roll()`, tag parsing, substitution | ✅ Complete (37 tests) |
+| 8 | CLI text interface (`src/interface/cli.py`) and main entry point (`src/main.py`) | ✅ Complete |
 | 9+ | Polish, voice, multi-character, OpenAI, etc. | 🔲 Not started |
 
-**117 tests passing** across Phases 1–6.
+**154 tests passing** across Phases 1–7. Phase 8 is covered by manual end-to-end testing (no unit tests).
 
 ---
 
@@ -194,6 +194,26 @@ The full campaign text, written sequentially. This is the authoritative source f
 ---
 
 ## Getting Started
+
+### Reference Hardware
+
+This system was built and tested on the following hardware:
+
+| Component | Specification |
+|---|---|
+| **OS** | Windows 11 Home 64-bit |
+| **CPU** | 12th Gen Intel Core i5-12500H (16 logical CPUs) @ ~2.5 GHz |
+| **RAM** | 32 GB DDR5 |
+| **GPU** | NVIDIA GeForce RTX 4060 Laptop GPU (8 GB VRAM) |
+
+The RTX 4060 Laptop GPU (8 GB VRAM) runs `llama3.1:8b` fully on-GPU at a comfortable speed (~20–30 tokens/sec). Models larger than ~8B parameters will exceed the VRAM budget and fall back to slower CPU offloading or become impractical without quantization.
+
+**Minimum recommended hardware:**
+- 8 GB system RAM (16 GB+ recommended for larger models)
+- NVIDIA GPU with 6 GB+ VRAM for GPU inference, or a modern CPU with 16 GB+ RAM for CPU-only inference (significantly slower)
+- 10 GB free disk space for models and the Kuzu graph database
+
+> **macOS / Linux**: The system is cross-platform (Python + Ollama both support macOS and Linux). The setup commands below use Windows paths — substitute the `source .venv/bin/activate` activation command for macOS/Linux.
 
 ### Prerequisites
 - Python 3.11+

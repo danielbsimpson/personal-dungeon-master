@@ -206,7 +206,7 @@ Build the LLM-powered Dungeon Master that reads context and generates responses.
     3. Record turn in memory (session window + Graphiti episode)
     4. Advance progress pointer if next scene title appears in DM response
     5. Return the final DM response
-    - Note: Dice tag substitution (`[ROLL: ...]`) is wired in Phase 7
+    - Note: Dice tag substitution (`[ROLL: ...]`) wired in Phase 7 ✅
   - [ ] Implement retry logic with exponential backoff for API errors (delegates to provider implementation)
 - [x] Write unit tests in `tests/test_dm.py`
   - [x] Mock the `LLMProvider` interface and test that the system prompt is built correctly
@@ -219,30 +219,30 @@ Build the LLM-powered Dungeon Master that reads context and generates responses.
 
 Build the dice rolling engine that gives the DM real, unbiased randomness for every roll in the game.
 
-- [ ] `src/dice/die.py`
-  - [ ] Define `Die` enum with all standard tabletop die types: `D4`, `D6`, `D8`, `D10`, `D12`, `D20`, `D100`
-  - [ ] Each member stores its number of faces as an integer value (e.g., `D20 = 20`)
-  - [ ] Define `RollResult` dataclass: `die`, `rolls: list[int]`, `modifier: int`, `total: int`, `label: str` (e.g., `"attack"`)
-  - [ ] Define `RollRequest` dataclass: `label`, `die`, `count` (default 1), `modifier` (default 0), `advantage: bool`, `disadvantage: bool`
-- [ ] `src/dice/roller.py`
-  - [ ] Seed `random.Random` from `secrets.randbits(128)` at module load — ensures cryptographically seeded randomness that the LLM cannot predict
-  - [ ] `roll(req: RollRequest) -> RollResult`:
-    - [ ] Roll `req.count` dice, each constrained to `[1, req.die.value]`
-    - [ ] If `advantage=True`: roll twice, keep the highest single die result
-    - [ ] If `disadvantage=True`: roll twice, keep the lowest single die result
-    - [ ] Apply `modifier` to the sum of rolls to produce `total`
-    - [ ] `total` is always at minimum 1 (per 5e rules for damage rolls)
-  - [ ] `parse_roll_tags(text: str) -> list[RollRequest]` — extract all `[ROLL: <label> <NdX>[+/-modifier>]]` tags from an LLM response string using regex
-  - [ ] `substitute_rolls(text: str, results: list[RollResult]) -> str` — replace each `[ROLL: ...]` tag in the text with its formatted result string
-  - [ ] `format_result(result: RollResult) -> str` — produce a human-readable result string for terminal display (e.g., `✨ Attack Roll [d20+5]: rolled 14 + 5 = **19**`)
-- [ ] Write unit tests in `tests/test_dice.py`
-  - [ ] Test that `Die` enum values match their face counts (D6.value == 6, D20.value == 20, etc.)
-  - [ ] Test that `roll()` always returns a value within the valid range `[1 + modifier, die.value + modifier]` (allowing for negative modifiers flooring at 1)
-  - [ ] Test that `roll_multiple(2, Die.D6)` returns exactly 2 individual rolls
-  - [ ] Test that advantage always returns a total ≥ disadvantage given the same seed
-  - [ ] Test that `parse_roll_tags` correctly extracts die type, count, and modifier from tag strings
-  - [ ] Test that `substitute_rolls` replaces all tags in a string without mutating non-tag content
-  - [ ] Test 1000 rolls on each die type — assert min/max are within bounds and distribution is roughly uniform
+- [x] `src/dice/die.py`
+  - [x] Define `Die` enum with all standard tabletop die types: `D4`, `D6`, `D8`, `D10`, `D12`, `D20`, `D100`
+  - [x] Each member stores its number of faces as an integer value (e.g., `D20 = 20`)
+  - [x] Define `RollResult` dataclass: `die`, `rolls: list[int]`, `modifier: int`, `total: int`, `label: str` (e.g., `"attack"`)
+  - [x] Define `RollRequest` dataclass: `label`, `die`, `count` (default 1), `modifier` (default 0), `advantage: bool`, `disadvantage: bool`
+- [x] `src/dice/roller.py`
+  - [x] Seed `random.Random` from `secrets.randbits(128)` at module load — ensures cryptographically seeded randomness that the LLM cannot predict
+  - [x] `roll(req: RollRequest) -> RollResult`:
+    - [x] Roll `req.count` dice, each constrained to `[1, req.die.value]`
+    - [x] If `advantage=True`: roll twice, keep the highest single die result
+    - [x] If `disadvantage=True`: roll twice, keep the lowest single die result
+    - [x] Apply `modifier` to the sum of rolls to produce `total`
+    - [x] `total` is always at minimum 1 (per 5e rules for damage rolls)
+  - [x] `parse_roll_tags(text: str) -> list[RollRequest]` — extract all `[ROLL: <label> <NdX>[+/-modifier>]]` tags from an LLM response string using regex
+  - [x] `substitute_rolls(text: str, results: list[RollResult]) -> str` — replace each `[ROLL: ...]` tag in the text with its formatted result string
+  - [x] `format_result(result: RollResult) -> str` — produce a human-readable result string for terminal display (e.g., `✨ Attack Roll [d20+5]: rolled 14 + 5 = **19**`)
+- [x] Write unit tests in `tests/test_dice.py`
+  - [x] Test that `Die` enum values match their face counts (D6.value == 6, D20.value == 20, etc.)
+  - [x] Test that `roll()` always returns a value within the valid range `[1 + modifier, die.value + modifier]` (allowing for negative modifiers flooring at 1)
+  - [x] Test that rolling multiple dice returns the expected number of individual rolls
+  - [x] Test that advantage always returns a total ≥ disadvantage given the same seed
+  - [x] Test that `parse_roll_tags` correctly extracts die type, count, and modifier from tag strings
+  - [x] Test that `substitute_rolls` replaces all tags in a string without mutating non-tag content
+  - [x] Test 1000 rolls on each die type — assert min/max are within bounds and distribution is roughly uniform
 
 ---
 
@@ -250,29 +250,29 @@ Build the dice rolling engine that gives the DM real, unbiased randomness for ev
 
 Wire everything together into a working text-based adventure session.
 
-- [ ] `src/interface/cli.py`
-  - [ ] Print a styled welcome banner using `rich`
-  - [ ] Display the selected campaign name and a brief summary before the adventure begins
-  - [ ] Render DM responses with atmospheric formatting (markdown-aware, colored output)
-  - [ ] Accept player input via `input()` prompt styled with `rich`
-  - [ ] Handle special commands:
-    - [ ] `/quit` or `/exit` — save and exit gracefully
-    - [ ] `/journal` — render a human-readable view of the knowledge graph (entities grouped by type, with their relationships) using `rich`
-    - [ ] `/status` — display current character stats and inventory
-    - [ ] `/save` — explicitly save session state (auto-save also happens after every message)
-    - [ ] `/reset` — confirm and wipe the session window; knowledge graph is preserved
-    - [ ] `/fullreset` — confirm and wipe both session window and knowledge graph (restart the campaign from scratch)
-    - [ ] `/roll <expression>` — let the player roll their own dice at any time (e.g., `/roll d20+3`, `/roll 2d6`); display the result in the same styled format as DM rolls
-    - [ ] `/graph <entity>` — look up a specific entity in the knowledge graph and display its relationships
-    - [ ] `/help` — list available commands
-  - [ ] After each DM response, if dice were rolled, render each `RollResult` in a styled panel (using `rich`) showing: die type badge, individual roll values, modifier, and bold total — displayed between the player's input and the DM's narration
-  - [ ] Handle `KeyboardInterrupt` (Ctrl+C) gracefully — save and exit
-- [ ] `src/main.py`
-  - [ ] Entry point: load config, run campaign selector, load rules for configured edition, initialize LLM provider via factory, initialize `DungeonMaster`, start chat loop
-  - [ ] Verify Ollama is running at startup; if `DM_MODEL` is not set, show model picker
-  - [ ] Check that all required environment variables are set before proceeding
-  - [ ] Print a helpful error message if the `campaigns/` directory is empty or missing
-  - [ ] Print a helpful error message if the `rules/<edition>/` directory is missing
+- [x] `src/interface/cli.py`
+  - [x] Print a styled welcome banner using `rich`
+  - [x] Display the selected campaign name and a brief summary before the adventure begins
+  - [x] Render DM responses with atmospheric formatting (markdown-aware, colored output)
+  - [x] Accept player input via `input()` prompt styled with `rich`
+  - [x] Handle special commands:
+    - [x] `/quit` or `/exit` — save and exit gracefully
+    - [x] `/journal` — render a human-readable view of the knowledge graph (entities grouped by type, with their relationships) using `rich`
+    - [x] `/status` — display current character stats and inventory
+    - [x] `/save` — explicitly save session state (auto-save also happens after every message)
+    - [x] `/reset` — confirm and wipe the session window; knowledge graph is preserved
+    - [x] `/fullreset` — confirm and wipe both session window and knowledge graph (restart the campaign from scratch)
+    - [x] `/roll <expression>` — let the player roll their own dice at any time (e.g., `/roll d20+3`, `/roll 2d6`); display the result in the same styled format as DM rolls
+    - [x] `/graph <entity>` — look up a specific entity in the knowledge graph and display its relationships
+    - [x] `/help` — list available commands
+  - [x] After each DM response, if dice were rolled, render each `RollResult` in a styled panel (using `rich`) showing: die type badge, individual roll values, modifier, and bold total — displayed between the player's input and the DM's narration
+  - [x] Handle `KeyboardInterrupt` (Ctrl+C) gracefully — save and exit
+- [x] `src/main.py`
+  - [x] Entry point: load config, run campaign selector, load rules for configured edition, initialize LLM provider via factory, initialize `DungeonMaster`, start chat loop
+  - [x] Verify Ollama is running at startup; if `DM_MODEL` is not set, show model picker
+  - [x] Check that all required environment variables are set before proceeding
+  - [x] Print a helpful error message if the `campaigns/` directory is empty or missing
+  - [x] Print a helpful error message if the `rules/<edition>/` directory is missing
 - [ ] Manual end-to-end test with the example campaign:
   - [ ] Play through at least 3 scenes of the example campaign
   - [ ] Verify spoiler guard does not reveal future scenes

@@ -24,6 +24,7 @@ from typing import Optional
 from src.campaign.parser import ParsedCampaign
 from src.config import Settings
 from src.config import settings as _default_settings
+from src.dice.roller import parse_roll_tags, roll, substitute_rolls
 from src.dm.context_builder import build_system_prompt, detect_narrative_state
 from src.dm.memory.manager import MemoryManager
 from src.llm.base import LLMProvider
@@ -72,6 +73,7 @@ class DungeonMaster:
         self._settings = settings or _default_settings
         self._turn: int = 0
         self._state: NarrativeState = NarrativeState.EXPLORATION
+        self._last_roll_results: list = []
 
     # ------------------------------------------------------------------
     # Public API
@@ -168,6 +170,16 @@ class DungeonMaster:
             max_tokens=self._settings.max_tokens,
         )
 
+        # --- Phase 7: resolve any [ROLL: ...] tags in the DM response -------
+        roll_requests = parse_roll_tags(dm_response)
+        if roll_requests:
+            roll_results = [roll(req) for req in roll_requests]
+            dm_response = substitute_rolls(dm_response, roll_results)
+            self._last_roll_results = roll_results
+        else:
+            self._last_roll_results = []
+        # ---------------------------------------------------------------------
+
         self._turn += 1
         await self._memory.record_turn(player_input, dm_response, self._turn)
         self._maybe_advance_progress(dm_response)
@@ -199,3 +211,22 @@ class DungeonMaster:
                 self._campaign.scene_titles[next_section],
             )
             self._memory.advance_progress(next_section)
+
+    # ------------------------------------------------------------------
+    # Properties
+    # ------------------------------------------------------------------
+
+    @property
+    def last_roll_results(self) -> list:
+        """
+        Roll results from the most recent :meth:`respond` call.
+
+        Returns an empty list if no dice were rolled in the last turn.
+        The CLI uses this to render styled dice panels after each DM response.
+        """
+        return self._last_roll_results
+
+    @property
+    def campaign(self) -> "ParsedCampaign":
+        """The parsed campaign data for this session."""
+        return self._campaign

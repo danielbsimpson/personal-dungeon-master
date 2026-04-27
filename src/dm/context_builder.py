@@ -46,7 +46,7 @@ _CHARS_PER_TOKEN: int = 4
 # Default system-prompt token budget.  Leaves room for the session window and
 # the model's output within a typical 8 K context window.
 # Phase 9 replaces this with model-aware token counting.
-_DEFAULT_TOKEN_BUDGET: int = 4_000
+_DEFAULT_TOKEN_BUDGET: int = 6_000
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Narrative state detection
