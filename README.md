@@ -1,5 +1,5 @@
 # Personal Dungeon Master
-
+![](images/personal_dm_image_gothic_clay.png)
 An AI-powered Dungeon Master that reads from structured campaign files and guides a player through a tabletop RPG adventure via a conversational text interface — with voice interaction planned for a future phase.
 
 Runs **entirely locally via [Ollama](https://ollama.com/)** — no API keys, no cloud calls, no data leaving your machine. OpenAI API support is planned for a later phase once the system is proven fully offline. Built for players who want full privacy and offline play on their own hardware.
