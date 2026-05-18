@@ -216,6 +216,33 @@ async def _run_session(
         log.info("Session window reset via CLI flag.")
 
     # ------------------------------------------------------------------
+    # 6b. Enrich campaign with semantic chunks + hierarchical index
+    # ------------------------------------------------------------------
+    try:
+        from src.campaign.loader import enrich_campaign
+
+        async def _summarise_fn(prompt: str) -> str:
+            return llm.complete([{"role": "user", "content": prompt}])
+
+        console.print("[dim]Building campaign index (this may take a moment on first run)...[/dim]")
+        await enrich_campaign(
+            parsed=parsed,
+            embed_fn=memory.embed,
+            summarise_fn=_summarise_fn,
+            memory_dir=settings.memory_dir,
+        )
+        if parsed.index is not None:
+            console.print(
+                f"[dim]Campaign index ready: {len(parsed.chunks)} chunks, "
+                f"{len(parsed.index.act_summaries)} acts.[/dim]"
+            )
+    except Exception as exc:  # noqa: BLE001
+        console.print(
+            f"[yellow]Campaign index build skipped (hierarchical retrieval unavailable): {exc}[/yellow]"
+        )
+        log.warning("enrich_campaign failed: %s", exc, exc_info=True)
+
+    # ------------------------------------------------------------------
     # 7. Build DM and start the session
     # ------------------------------------------------------------------
     dm = DungeonMaster(

@@ -78,6 +78,19 @@ class Settings(BaseSettings):
     graphiti_telemetry_enabled: bool = False
     """Whether to send anonymous telemetry to Graphiti/Zep."""
 
+    # ── Semantic chunking (Phase A) ───────────────────────────────────────────
+    chunk_breakpoint_threshold: float = 0.75
+    """
+    Cosine similarity floor for the semantic chunker.
+    Adjacent sentences with similarity below this value trigger a new chunk.
+    """
+
+    chunk_min_sentences: int = 3
+    """Minimum number of sentences before a semantic split is allowed."""
+
+    chunk_max_sentences: int = 40
+    """Maximum number of sentences in a chunk before a forced split."""
+
     # ── Derived paths (set by validators) ─────────────────────────────────────
     # Not read from env; computed from rules_dir + game_edition.
     rules_edition_dir: Path = _PROJECT_ROOT / "rules" / "5e"

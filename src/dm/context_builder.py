@@ -26,6 +26,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from src.campaign.parser import Character, Creature, ParsedCampaign
+from src.campaign.segment_extractor import extract_segments
 from src.dm.memory.manager import MemoryManager
 from src.dm.personality import DMPersonality
 from src.dm.spoiler_guard import revealed_text
@@ -224,12 +225,39 @@ async def build_system_prompt(
         f"## CREATURE REFERENCE\n\n{_format_creatures(campaign.creatures)}"
     )
 
-    # 6. Revealed campaign book (spoiler-guarded)
-    book_text = revealed_text(campaign.scenes, memory.campaign_progress)
-    book_section = f"## CAMPAIGN BOOK (revealed scenes)\n\n{book_text.strip()}"
-
-    # 7. Graph memory context (async retrieval)
+    # 6. Campaign book — use hierarchical index + RSE (Phases A–D) when available,
+    #    otherwise fall back to the spoiler-guarded scene window.
     query = current_text or campaign.summary
+    if campaign.index is not None and campaign.chunks:
+        try:
+            # Embed the query for hierarchical retrieval
+            _embed_raw = await memory.embed([query])
+            query_embedding = _embed_raw[0] if _embed_raw else []
+            if query_embedding:
+                retrieved_chunks = campaign.index.retrieve(
+                    query_embedding=query_embedding,
+                    progress_index=memory.campaign_progress,
+                    top_acts=2,
+                    top_chunks=5,
+                )
+                segments = extract_segments(
+                    retrieved=retrieved_chunks,
+                    all_chunks=campaign.chunks,
+                    all_embeddings=campaign.index.chunk_embeddings,
+                )
+                book_text = "\n\n---\n\n".join(segments) if segments else ""
+                book_section_title = "## CAMPAIGN BOOK (retrieved context)"
+            else:
+                raise ValueError("empty embedding")
+        except Exception as exc:
+            log.warning("Hierarchical retrieval failed (%s); falling back to scene window.", exc)
+            book_text = revealed_text(campaign.scenes, memory.campaign_progress)
+            book_section_title = "## CAMPAIGN BOOK (revealed scenes)"
+    else:
+        book_text = revealed_text(campaign.scenes, memory.campaign_progress)
+        book_section_title = "## CAMPAIGN BOOK (revealed scenes)"
+
+    book_section = f"{book_section_title}\n\n{book_text.strip()}"
     memory_ctx = await memory.get_context(query, group_id="")
     memory_section = f"## MEMORY\n\n{memory_ctx}" if memory_ctx else ""
 

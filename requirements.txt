@@ -6,6 +6,10 @@ rich>=13.0
 pydantic>=2.0
 pydantic-settings>=2.0
 graphiti-core[kuzu]>=0.28
+numpy>=1.24.0
+
+# Phase A — semantic chunking (install early; also needed for Phase E BM25 fusion)
+rank-bm25>=0.2.2
 
 # Test dependencies
 pytest>=9.0

@@ -11,10 +11,15 @@ parse_campaign(campaign: Campaign) -> ParsedCampaign
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from src.campaign.chunker import CampaignChunk
+    from src.campaign.index import CampaignIndex
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -183,6 +188,9 @@ class ParsedCampaign:
     scenes: list[str]        # each element is one scene's full text (including its header)
     scene_titles: list[str]  # e.g. ["Arrival in Millhaven", ...]
     raw_book: str
+    # Phase A/C: populated by enrich_campaign() after initial parse
+    chunks: list["CampaignChunk"] = field(default_factory=list)
+    index: "CampaignIndex | None" = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

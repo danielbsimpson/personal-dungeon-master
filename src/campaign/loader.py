@@ -10,8 +10,15 @@ A valid campaign folder must contain:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, Awaitable, Callable
+
+if TYPE_CHECKING:
+    from src.campaign.parser import ParsedCampaign
+
+log = logging.getLogger(__name__)
 
 
 _REQUIRED_FILES: frozenset[str] = frozenset({"README.md", "character.md", "creature.md"})
@@ -96,3 +103,73 @@ def load_campaigns(campaigns_dir: Path | None = None) -> list[Campaign]:
         )
 
     return campaigns
+
+
+async def enrich_campaign(
+    parsed: "ParsedCampaign",
+    embed_fn: Callable[[list[str]], Awaitable[list[list[float]]]],
+    summarise_fn: Callable[[str], Awaitable[str]],
+    memory_dir: Path,
+) -> None:
+    """
+    Build (or load from cache) the semantic chunks and hierarchical index for
+    *parsed* and attach them in place.
+
+    This is called once per session startup, after the LLM and embedder are
+    available.  Results are cached to disk so subsequent starts are fast.
+
+    Args:
+        parsed: A ParsedCampaign returned by parse_campaign().
+        embed_fn: Async embedder — returns a vector per input string.
+        summarise_fn: Async LLM function — returns a summary string.
+        memory_dir: Base memory directory (e.g. settings.memory_dir).
+    """
+    from src.campaign.chunker import semantic_chunk
+    from src.campaign.index import build_or_load_index
+    from src.config import settings as _settings
+
+    campaign_name = parsed.summary[:40].split("\n")[0].strip() or "campaign"
+
+    # Derive cache paths
+    cache_dir = memory_dir / campaign_name
+    chunks_cache = cache_dir / "campaign_chunks.pkl"
+    index_cache = cache_dir / "campaign_index.pkl"
+
+    import pickle
+
+    # ── Chunks (Phase A) ─────────────────────────────────────────────────────
+    if chunks_cache.exists():
+        log.info("Loading cached campaign chunks from '%s'.", chunks_cache)
+        try:
+            with open(chunks_cache, "rb") as f:
+                parsed.chunks = pickle.load(f)  # noqa: S301 — trusted local file
+        except Exception as exc:
+            log.warning("Failed to load cached chunks (%s); rebuilding.", exc)
+            parsed.chunks = []
+
+    if not parsed.chunks:
+        log.info("Building semantic chunks for campaign...")
+        parsed.chunks = await semantic_chunk(
+            parsed.raw_book,
+            embed_fn,
+            breakpoint_threshold=_settings.chunk_breakpoint_threshold,
+            min_chunk_sentences=_settings.chunk_min_sentences,
+            max_chunk_sentences=_settings.chunk_max_sentences,
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        with open(chunks_cache, "wb") as f:
+            pickle.dump(parsed.chunks, f)
+        log.info("Saved %d chunks to '%s'.", len(parsed.chunks), chunks_cache)
+
+    if not parsed.chunks:
+        log.warning("No chunks produced for campaign — hierarchical index skipped.")
+        return
+
+    # ── Hierarchical index (Phase C) ─────────────────────────────────────────
+    parsed.index = await build_or_load_index(
+        chunks=parsed.chunks,
+        embed_fn=embed_fn,
+        summarise_fn=summarise_fn,
+        campaign_name=campaign_name,
+        cache_path=index_cache,
+    )
