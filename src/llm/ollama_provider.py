@@ -9,7 +9,7 @@ discovery.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterator
 
 import httpx
 from openai import OpenAI
@@ -160,3 +160,31 @@ class OllamaProvider(LLMProvider):
             "OllamaProvider.complete: reply length=%d chars", len(reply)
         )
         return reply
+
+    def stream(self, messages: list[dict], **kwargs) -> Iterator[str]:
+        """Stream tokens from Ollama using the OpenAI-compatible streaming API."""
+        if not self._model:
+            raise RuntimeError(
+                "No model configured on OllamaProvider. "
+                "Call configure_model() before stream()."
+            )
+        temperature = kwargs.get("temperature", self._temperature)
+        max_tokens = kwargs.get("max_tokens", self._max_tokens)
+        log.debug(
+            "OllamaProvider.stream: model=%s messages=%d temperature=%s max_tokens=%d",
+            self._model,
+            len(messages),
+            temperature,
+            max_tokens,
+        )
+        stream = self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,  # type: ignore[arg-type]
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True,
+        )
+        for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content

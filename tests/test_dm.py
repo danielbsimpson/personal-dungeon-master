@@ -291,3 +291,139 @@ class TestDungeonMaster:
         messages = dm._llm.complete.call_args[0][0]
         # session messages appear between system prompt and new user message
         assert messages[1] == prior[0]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestDungeonMasterStream (Phase 10)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestDungeonMasterStream:
+    """Tests for DungeonMaster.respond_stream()."""
+
+    def _make_streaming_dm(self, chunks: list[str], progress: int = 0) -> DungeonMaster:
+        """Create a DM whose LLM streams the given list of string chunks."""
+        llm = MagicMock()
+        llm.complete = MagicMock(return_value="".join(chunks))
+        llm.stream = MagicMock(return_value=iter(chunks))
+        llm.context_window = 4096
+        campaign = _make_campaign()
+        rules = _make_rules()
+        memory = _make_memory(progress=progress)
+        return DungeonMaster(llm, campaign, rules, memory)
+
+    async def _collect(self, gen) -> list[str]:
+        """Drain an async generator into a list."""
+        result = []
+        async for chunk in gen:
+            result.append(chunk)
+        return result
+
+    async def test_stream_yields_multiple_chunks(self):
+        """respond_stream yields incremental chunks from the LLM stream."""
+        dm = self._make_streaming_dm(["The ", "torch ", "flickers."])
+        chunks = await self._collect(dm.respond_stream("I look around."))
+        assert "".join(chunks) == "The torch flickers."
+
+    async def test_stream_records_turn_in_memory(self):
+        """respond_stream records the full assembled response in memory."""
+        dm = self._make_streaming_dm(["A goblin ", "snarls."])
+        await self._collect(dm.respond_stream("I attack!"))
+        dm._memory.record_turn.assert_called_once()
+        call_args = dm._memory.record_turn.call_args[0]
+        assert call_args[0] == "I attack!"
+        assert call_args[1] == "A goblin snarls."
+
+    async def test_stream_cancel_event_stops_early(self):
+        """Setting the cancel_event mid-stream stops the generator."""
+        import threading
+
+        cancel_event = threading.Event()
+
+        # Stream 5 chunks; cancel after the first by setting the event.
+        emitted: list[str] = []
+        call_count = 0
+
+        def _side_effect_chunks(*_args, **_kwargs):
+            nonlocal call_count
+            for chunk in ["one", "two", "three", "four", "five"]:
+                if call_count == 1:
+                    cancel_event.set()
+                call_count += 1
+                yield chunk
+
+        dm = self._make_streaming_dm([])
+        dm._llm.stream = MagicMock(side_effect=_side_effect_chunks)
+
+        async for chunk in dm.respond_stream("go", cancel_event=cancel_event):
+            emitted.append(chunk)
+
+        # The interrupted marker must appear.
+        assert any("interrupted" in c for c in emitted)
+        # Fewer than all 5 chunks should have been emitted before interruption.
+        non_marker = [c for c in emitted if "interrupted" not in c]
+        assert len(non_marker) < 5
+
+    async def test_stream_roll_tag_buffered_across_chunks(self):
+        """A [ROLL: ...] tag split across two chunks is resolved correctly."""
+        dm = self._make_streaming_dm(["You swing! [ROLL: att", "ack 1d20+5] The blade bites."])
+
+        chunks = await self._collect(dm.respond_stream("I attack."))
+        full = "".join(chunks)
+
+        # The raw tag must not appear verbatim — it should be resolved.
+        assert "[ROLL: attack 1d20+5]" not in full
+        # The resolved result should contain numeric dice output.
+        assert "attack" in full.lower()
+
+    async def test_stream_interrupted_response_still_recorded(self):
+        """Even when cancelled early, the partial response is recorded in memory."""
+        import threading
+
+        cancel_event = threading.Event()
+        cancel_event.set()  # Pre-cancel — immediately interrupted.
+
+        dm = self._make_streaming_dm(["Never ", "seen."])
+        await self._collect(dm.respond_stream("hello", cancel_event=cancel_event))
+
+        # record_turn must still be called even with a pre-set cancel event.
+        dm._memory.record_turn.assert_called_once()
+
+
+class TestSplitSafeText:
+    """Unit tests for DungeonMaster._split_safe_text (roll-tag buffering)."""
+
+    def _split(self, buf: str) -> tuple[str, str, list]:
+        results: list = []
+        safe, remaining = DungeonMaster._split_safe_text(buf, results)
+        return safe, remaining, results
+
+    def test_no_roll_tag_yields_all(self):
+        safe, remaining, _ = self._split("Hello world.")
+        assert safe == "Hello world."
+        assert remaining == ""
+
+    def test_complete_roll_tag_is_resolved(self):
+        safe, remaining, results = self._split("[ROLL: attack 1d20+5]")
+        assert "[ROLL:" not in safe
+        assert remaining == ""
+        assert len(results) == 1
+
+    def test_incomplete_roll_tag_is_buffered(self):
+        safe, remaining, results = self._split("Before [ROLL: attack 1d20")
+        assert safe == "Before "
+        assert remaining == "[ROLL: attack 1d20"
+        assert results == []
+
+    def test_text_after_complete_tag_is_yielded(self):
+        safe, remaining, results = self._split("[ROLL: attack 1d20+0] hits!")
+        assert "hits!" in safe
+        assert remaining == ""
+        assert len(results) == 1
+
+    def test_multiple_complete_tags_all_resolved(self):
+        buf = "[ROLL: attack 1d20+3] and [ROLL: damage 1d8+0]"
+        safe, remaining, results = self._split(buf)
+        assert "[ROLL:" not in safe
+        assert remaining == ""
+        assert len(results) == 2

@@ -142,3 +142,61 @@ class TestOllamaProviderReachability:
 
             with pytest.raises(RuntimeError, match="did not respond within"):
                 OllamaProvider(settings)
+
+
+class TestOllamaProviderStream:
+    def test_stream_yields_multiple_chunks(self) -> None:
+        """stream() yields incremental content from each SSE chunk."""
+        provider = _make_provider()
+        provider._model = "llama3"
+
+        chunk1 = MagicMock()
+        chunk1.choices[0].delta.content = "Hello"
+        chunk2 = MagicMock()
+        chunk2.choices[0].delta.content = ", world"
+        chunk3 = MagicMock()
+        chunk3.choices[0].delta.content = "!"
+        # Chunks with no content (None) must be silently skipped.
+        empty_chunk = MagicMock()
+        empty_chunk.choices[0].delta.content = None
+
+        provider._client.chat.completions.create.return_value = iter(
+            [chunk1, empty_chunk, chunk2, chunk3]
+        )
+
+        result = list(provider.stream([{"role": "user", "content": "hi"}]))
+
+        assert result == ["Hello", ", world", "!"]
+
+    def test_stream_uses_stream_equals_true(self) -> None:
+        """stream() passes stream=True to the OpenAI client."""
+        provider = _make_provider()
+        provider._model = "llama3"
+        provider._client.chat.completions.create.return_value = iter([])
+
+        list(provider.stream([{"role": "user", "content": "hi"}]))
+
+        call_kwargs = provider._client.chat.completions.create.call_args[1]
+        assert call_kwargs["stream"] is True
+
+    def test_stream_raises_when_model_not_configured(self) -> None:
+        """stream() raises RuntimeError if no model has been configured."""
+        provider = _make_provider()
+        # _model is empty string by default
+
+        with pytest.raises(RuntimeError, match="No model configured"):
+            list(provider.stream([]))
+
+
+class TestLLMProviderStreamDefault:
+    def test_default_stream_delegates_to_complete(self) -> None:
+        """The default stream() implementation yields complete() as one chunk."""
+        from src.llm.base import LLMProvider
+
+        class _ConcreteProvider(LLMProvider):
+            def complete(self, messages: list[dict], **kwargs) -> str:
+                return "full response"
+
+        provider = _ConcreteProvider()
+        chunks = list(provider.stream([]))
+        assert chunks == ["full response"]

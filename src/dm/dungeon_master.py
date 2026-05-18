@@ -19,6 +19,7 @@ Usage
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Optional
 
 from src.campaign.parser import ParsedCampaign
@@ -308,3 +309,148 @@ class DungeonMaster:
     def rules(self) -> "RulesReference":
         """The loaded rules reference for this session."""
         return self._rules
+
+    # ------------------------------------------------------------------
+    # Streaming support (Phase 10)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _split_safe_text(
+        buf: str,
+        roll_results: list,
+    ) -> tuple[str, str]:
+        """
+        Split *buf* into ``(safe_to_yield, remaining_buffer)``.
+
+        Yields text that contains no open, unresolved ``[ROLL: ...]`` tags.
+        Keeps partial tags in *remaining_buffer* until the closing ``]``
+        arrives in a future chunk.  When a complete tag is detected it is
+        resolved immediately; the roll result is appended to *roll_results*.
+        """
+        safe_parts: list[str] = []
+
+        while True:
+            open_idx = buf.find("[ROLL:")
+            if open_idx == -1:
+                # No roll tag anywhere — everything is safe.
+                safe_parts.append(buf)
+                buf = ""
+                break
+
+            close_idx = buf.find("]", open_idx)
+            if close_idx == -1:
+                # Incomplete tag — yield text before it; keep tag fragment.
+                safe_parts.append(buf[:open_idx])
+                buf = buf[open_idx:]
+                break
+
+            # Complete tag — resolve it.
+            before = buf[:open_idx]
+            tag = buf[open_idx : close_idx + 1]
+            buf = buf[close_idx + 1 :]
+
+            tags = parse_roll_tags(tag)
+            if tags:
+                results = [roll(req) for req in tags]
+                roll_results.extend(results)
+                resolved = substitute_rolls(tag, results)
+                safe_parts.append(before + resolved)
+            else:
+                safe_parts.append(before + tag)
+
+        return "".join(safe_parts), buf
+
+    async def respond_stream(
+        self,
+        player_input: str,
+        cancel_event: threading.Event | None = None,
+    ):  # -> AsyncGenerator[str, None]
+        """
+        Async generator that streams the DM's response token by token.
+
+        Follows the same pipeline as :meth:`respond` but yields incremental
+        text chunks as they arrive from the LLM.  ``[ROLL: ...]`` tags are
+        buffered across chunk boundaries and resolved before being yielded,
+        so callers always receive clean, resolved text.
+
+        If *cancel_event* is set (by an interrupt thread) the stream is
+        cut short; the partial response is still recorded in memory so
+        the knowledge graph always reflects what the player saw.
+
+        Parameters
+        ----------
+        player_input:
+            The player's raw input text for this turn.
+        cancel_event:
+            Optional :class:`threading.Event`.  When set, the stream yields
+            a ``[interrupted]`` marker and stops early.
+
+        Yields
+        ------
+        str
+            Incremental text chunks of the DM's narration.
+        """
+        self._state = detect_narrative_state(player_input)
+
+        system_prompt = await build_system_prompt(
+            campaign=self._campaign,
+            rules=self._rules,
+            memory=self._memory,
+            state=self._state,
+            current_text=player_input,
+            token_budget=self._system_prompt_budget(),
+        )
+
+        session_msgs = self._trim_session_to_budget(
+            self._memory.session_messages(), system_prompt, player_input
+        )
+        messages = (
+            [{"role": "system", "content": system_prompt}]
+            + session_msgs
+            + [{"role": "user", "content": player_input}]
+        )
+
+        roll_results: list = []
+        response_parts: list[str] = []
+        pending = ""
+        interrupted = False
+
+        try:
+            for chunk in self._llm.stream(
+                messages,
+                temperature=self._settings.dm_temperature,
+                max_tokens=self._settings.max_tokens,
+            ):
+                if cancel_event is not None and cancel_event.is_set():
+                    interrupted = True
+                    break
+
+                pending += chunk
+                safe, pending = self._split_safe_text(pending, roll_results)
+                if safe:
+                    response_parts.append(safe)
+                    yield safe
+        finally:
+            # Flush any remaining buffered text (including incomplete tags).
+            if pending:
+                tags = parse_roll_tags(pending)
+                if tags:
+                    results = [roll(req) for req in tags]
+                    roll_results.extend(results)
+                    resolved = substitute_rolls(pending, results)
+                    response_parts.append(resolved)
+                    if not interrupted:
+                        yield resolved
+                else:
+                    response_parts.append(pending)
+                    if not interrupted:
+                        yield pending
+
+            if interrupted:
+                yield "\n\n*[interrupted]*"
+
+            full_response = "".join(response_parts)
+            self._last_roll_results = roll_results
+            self._turn += 1
+            await self._memory.record_turn(player_input, full_response, self._turn)
+            self._maybe_advance_progress(full_response)

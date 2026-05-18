@@ -20,11 +20,14 @@ Special commands
 from __future__ import annotations
 
 import asyncio
+import sys
+import threading
 from typing import Optional
 
 from rich import box
 from rich.columns import Columns
 from rich.console import Console
+from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
@@ -106,6 +109,105 @@ def print_dm_response(text: str) -> None:
             padding=(1, 2),
         )
     )
+
+
+# ---------------------------------------------------------------------------
+# Streaming helpers (Phase 10)
+# ---------------------------------------------------------------------------
+
+
+def _make_interrupt_watcher() -> tuple[threading.Event, threading.Thread]:
+    """
+    Return *(cancel_event, thread)* for detecting a player keypress interrupt.
+
+    The background thread blocks on a single keypress using a
+    platform-appropriate method; when a key arrives it sets *cancel_event*.
+    The thread is a daemon so it never prevents the process from exiting.
+    """
+    cancel_event = threading.Event()
+
+    def _listen() -> None:
+        try:
+            if sys.platform == "win32":
+                import msvcrt  # noqa: PLC0415
+
+                msvcrt.getwch()
+            else:
+                import select  # noqa: PLC0415
+                import termios  # noqa: PLC0415
+                import tty  # noqa: PLC0415
+
+                fd = sys.stdin.fileno()
+                old_settings = termios.tcgetattr(fd)
+                try:
+                    tty.setraw(fd)
+                    select.select([sys.stdin], [], [])
+                    sys.stdin.read(1)
+                finally:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        except Exception:
+            pass
+        cancel_event.set()
+
+    thread = threading.Thread(target=_listen, daemon=True)
+    return cancel_event, thread
+
+
+async def _stream_dm_response(dm: DungeonMaster, player_input: str) -> bool:
+    """
+    Stream the DM's response to the terminal using :class:`rich.live.Live`.
+
+    Launches an interrupt-watcher thread so the player can press any key to
+    stop the stream early.  Returns ``True`` if the stream was interrupted,
+    ``False`` if it completed normally.
+
+    The full (or partial) response and all dice rolls are recorded in memory
+    regardless of whether the stream was cut short — this is handled inside
+    :meth:`~src.dm.dungeon_master.DungeonMaster.respond_stream`.
+    """
+    cancel_event, interrupt_thread = _make_interrupt_watcher()
+    interrupt_thread.start()
+
+    console.print()
+    console.print(
+        "[dim]   (Press any key to interrupt the DM…)[/dim]",
+    )
+    console.print()
+
+    accumulated = ""
+    interrupted = False
+
+    with Live(
+        Panel(
+            Markdown(""),
+            title="[bold green]Dungeon Master[/bold green]",
+            border_style="green",
+            padding=(1, 2),
+        ),
+        console=console,
+        refresh_per_second=12,
+        vertical_overflow="visible",
+    ) as live:
+        async for chunk in dm.respond_stream(player_input, cancel_event=cancel_event):
+            if chunk == "\n\n*[interrupted]*":
+                interrupted = True
+            accumulated += chunk
+            live.update(
+                Panel(
+                    Markdown(accumulated),
+                    title=(
+                        "[bold yellow]Dungeon Master — interrupted[/bold yellow]"
+                        if interrupted
+                        else "[bold green]Dungeon Master[/bold green]"
+                    ),
+                    border_style="yellow" if interrupted else "green",
+                    padding=(1, 2),
+                )
+            )
+
+    # Cancel event may still be pending — set it so the watcher thread exits.
+    cancel_event.set()
+    return interrupted
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +448,6 @@ async def run_session(
         opening = await dm.start_campaign()
     print_roll_results(dm.last_roll_results)
     print_dm_response(opening)
-
     try:
         while True:
             console.print()
@@ -415,11 +516,8 @@ async def run_session(
                 continue
 
             # --- Normal player input --------------------------------------
-            with console.status("[green]The DM is thinking…[/green]", spinner="dots"):
-                response = await dm.respond(raw)
-
+            await _stream_dm_response(dm, raw)
             print_roll_results(dm.last_roll_results)
-            print_dm_response(response)
 
     except KeyboardInterrupt:
         console.print()

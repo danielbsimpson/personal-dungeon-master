@@ -306,23 +306,23 @@ Harden the system before adding features.
 
 Replace the “Thinking...” spinner with live word-by-word output from the LLM. Allow the player to interrupt the DM mid-response, just as you might cut off a speaker at the table.
 
-- [ ] `src/llm/base.py`
-  - [ ] Add optional `stream(messages: list[dict], **kwargs) -> Iterator[str]` method to `LLMProvider`; provide a default implementation that delegates to `complete()` for providers that do not implement streaming
-- [ ] `src/llm/ollama_provider.py`
-  - [ ] Implement `stream()` using `stream=True` on the OpenAI-compatible client; yield string tokens as they arrive from the model
-- [ ] `src/dm/dungeon_master.py`
-  - [ ] Add `respond_stream(player_input: str) -> Iterator[str]` — same pipeline as `respond()` but yields tokens incrementally
-  - [ ] Buffer the incoming stream to detect and resolve complete `[ROLL: ...]` tags before yielding downstream; accumulate partial tags at chunk boundaries until the closing `]` is received, then perform the roll and emit the resolved text
-  - [ ] Record the full (or partial, if interrupted) response in memory regardless of whether the stream was cut short
-- [ ] `src/interface/cli.py`
-  - [ ] Replace the “Thinking...” spinner with a live streaming display using `rich.live`; print each token as it arrives
-  - [ ] Implement player interrupt: spawn a background thread that waits for any keyboard input while the DM is streaming; when triggered, send a cancel signal to the stream iterator and display a `[interrupted]` indicator
-  - [ ] Ensure partial DM responses are formatted and stored correctly after interruption
-  - [ ] Ensure dice roll panels still render correctly when rolls occur mid-stream
-- [ ] Write unit tests
-  - [ ] Test that `OllamaProvider.stream()` yields multiple incremental string chunks
-  - [ ] Test that dice tags split across chunk boundaries are buffered and resolved correctly
-  - [ ] Test that an interrupted response is still passed to `MemoryManager.record_turn`
+- [x] `src/llm/base.py`
+  - [x] Add optional `stream(messages: list[dict], **kwargs) -> Iterator[str]` method to `LLMProvider`; provide a default implementation that delegates to `complete()` for providers that do not implement streaming
+- [x] `src/llm/ollama_provider.py`
+  - [x] Implement `stream()` using `stream=True` on the OpenAI-compatible client; yield string tokens as they arrive from the model
+- [x] `src/dm/dungeon_master.py`
+  - [x] Add `respond_stream(player_input: str) -> Iterator[str]` — same pipeline as `respond()` but yields tokens incrementally
+  - [x] Buffer the incoming stream to detect and resolve complete `[ROLL: ...]` tags before yielding downstream; accumulate partial tags at chunk boundaries until the closing `]` is received, then perform the roll and emit the resolved text
+  - [x] Record the full (or partial, if interrupted) response in memory regardless of whether the stream was cut short
+- [x] `src/interface/cli.py`
+  - [x] Replace the “Thinking...” spinner with a live streaming display using `rich.live`; print each token as it arrives
+  - [x] Implement player interrupt: spawn a background thread that waits for any keyboard input while the DM is streaming; when triggered, send a cancel signal to the stream iterator and display a `[interrupted]` indicator
+  - [x] Ensure partial DM responses are formatted and stored correctly after interruption
+  - [x] Ensure dice roll panels still render correctly when rolls occur mid-stream
+- [x] Write unit tests
+  - [x] Test that `OllamaProvider.stream()` yields multiple incremental string chunks
+  - [x] Test that dice tags split across chunk boundaries are buffered and resolved correctly
+  - [x] Test that an interrupted response is still passed to `MemoryManager.record_turn`
 
 ---
 

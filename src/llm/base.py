@@ -2,13 +2,16 @@
 Abstract base for all LLM providers.
 
 New providers (e.g. OpenAI in Phase 13) must subclass LLMProvider and
-implement complete().
+implement complete().  Streaming is optional — providers that do not
+implement stream() receive a default implementation that delegates to
+complete() and yields the full reply as a single chunk.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Iterator
 
 
 @dataclass
@@ -45,3 +48,22 @@ class LLMProvider(ABC):
             The assistant's reply as a plain string.
         """
         ...
+
+    def stream(self, messages: list[dict], **kwargs) -> Iterator[str]:
+        """
+        Stream the assistant's reply as a sequence of text chunks.
+
+        The default implementation delegates to :meth:`complete` and yields
+        the full reply as a single chunk.  Providers that support native
+        streaming (e.g. :class:`~src.llm.ollama_provider.OllamaProvider`)
+        should override this to yield incremental tokens.
+
+        Args:
+            messages: List of ``{"role": ..., "content": ...}`` dicts in
+                OpenAI chat format.
+            **kwargs: Optional overrides (e.g. ``temperature``, ``max_tokens``).
+
+        Yields:
+            String chunks of the assistant's reply.
+        """
+        yield self.complete(messages, **kwargs)
