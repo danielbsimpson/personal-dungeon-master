@@ -243,21 +243,7 @@ async def _run_session(
         log.warning("enrich_campaign failed: %s", exc, exc_info=True)
 
     # ------------------------------------------------------------------
-    # 7. Build DM and start the session
-    # ------------------------------------------------------------------
-    dm = DungeonMaster(
-        llm=llm,
-        campaign=parsed,
-        rules=rules,
-        memory=memory,
-        settings=settings,
-        personality=selected_personality,
-    )
-
-    print_campaign_header(parsed)
-
-    # ------------------------------------------------------------------
-    # 4b. Personality selection
+    # 7. Personality selection
     # ------------------------------------------------------------------
     from rich.table import Table  # noqa: PLC0415
 
@@ -307,6 +293,21 @@ async def _run_session(
         f"[dim]{selected_personality.description}[/dim]"
     )
     log.info("Personality selected: '%s'", selected_personality.name)
+
+    # ------------------------------------------------------------------
+    # 8. Build DM and start the session
+    # ------------------------------------------------------------------
+    dm = DungeonMaster(
+        llm=llm,
+        campaign=parsed,
+        rules=rules,
+        memory=memory,
+        settings=settings,
+        personality=selected_personality,
+    )
+
+    print_campaign_header(parsed)
+
     log.info(
         "Session ready: model='%s' context_window=%d",
         settings.dm_model,

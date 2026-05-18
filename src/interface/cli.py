@@ -514,7 +514,7 @@ async def run_session(
     console.print()
     console.print(
         Rule(
-            f"[dim]The adventure begins… [/dim][dim italic]DM: {dm.personality.name}[/dim]",
+            f"[dim]The adventure begins… [/dim][dim italic]DM: {dm.personality.name}[/dim italic]",
             style="dim green",
         )
     )
