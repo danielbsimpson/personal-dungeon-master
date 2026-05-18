@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 
 from src.campaign.parser import Character, Creature, ParsedCampaign
 from src.dm.memory.manager import MemoryManager
+from src.dm.personality import DMPersonality
 from src.dm.spoiler_guard import revealed_text
 from src.rules.loader import RulesReference
 from src.rules.reference import NarrativeState, get_relevant_rules
@@ -175,6 +176,7 @@ async def build_system_prompt(
     state: NarrativeState = NarrativeState.EXPLORATION,
     current_text: str = "",
     token_budget: int = _DEFAULT_TOKEN_BUDGET,
+    personality: DMPersonality | None = None,
 ) -> str:
     """
     Assemble the full system prompt for a DM turn.
@@ -202,8 +204,10 @@ async def build_system_prompt(
     str
         The complete system prompt string.
     """
-    # 1. DM persona
+    # 1. DM persona + optional personality directive
     persona_section = _DM_PERSONA.strip()
+    if personality is not None:
+        persona_section = persona_section + "\n\n" + personality.system_prompt_directive
 
     # 2. Relevant rules
     rules_text = get_relevant_rules(rules, state, current_text)

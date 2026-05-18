@@ -6,8 +6,8 @@ Wires together the full pipeline:
 1. Load campaigns from ``campaigns/``
 2. Let the player select a campaign interactively (or use ``--campaign``)
 3. Load the D&D rules for the configured edition (or use ``--edition``)
-4. Create the LLM provider (verifies Ollama connectivity, picks a model
-   interactively if ``DM_MODEL`` is not set in ``.env``)
+4. Create the LLM provider (verifies llama.cpp server connectivity, picks a
+   model interactively if ``DM_MODEL`` is not set in ``.env``)
 5. Initialise and load :class:`~src.dm.memory.manager.MemoryManager`
 6. Build the :class:`~src.dm.dungeon_master.DungeonMaster`
 7. Hand control to :func:`~src.interface.cli.run_session`
@@ -38,6 +38,7 @@ from src.campaign.selector import select_campaign
 from src.config import settings
 from src.dm.dungeon_master import DungeonMaster
 from src.dm.memory.manager import MemoryManager
+from src.dm.personality import DEFAULT_PERSONALITY, PERSONALITIES, get_personality
 from src.interface.cli import print_banner, print_campaign_header, run_session
 from src.llm.factory import create_provider
 from src.rules.loader import load_rules
@@ -223,9 +224,62 @@ async def _run_session(
         rules=rules,
         memory=memory,
         settings=settings,
+        personality=selected_personality,
     )
 
     print_campaign_header(parsed)
+
+    # ------------------------------------------------------------------
+    # 4b. Personality selection
+    # ------------------------------------------------------------------
+    from rich.table import Table  # noqa: PLC0415
+
+    personality_table = Table(
+        title="Choose your Dungeon Master",
+        show_header=True,
+        header_style="bold cyan",
+        border_style="dim",
+        show_lines=False,
+    )
+    personality_table.add_column("#", style="bold cyan", width=3, justify="right")
+    personality_table.add_column("Name", style="bold white", no_wrap=True)
+    personality_table.add_column("Tone", style="dim", width=9)
+    personality_table.add_column("Verbosity", style="dim", width=10)
+    personality_table.add_column("Description", style="white", overflow="fold")
+    for i, p in enumerate(PERSONALITIES, start=1):
+        personality_table.add_row(
+            str(i), p.name, p.tone, p.verbosity, p.description
+        )
+    console.print()
+    console.print(personality_table)
+    console.print()
+
+    selected_personality = DEFAULT_PERSONALITY
+    raw_choice = console.input(
+        f"[bold cyan]Choose a DM personality[/bold cyan] "
+        f"[dim](1–{len(PERSONALITIES)}, default = The Sage)[/dim]: "
+    ).strip()
+    if raw_choice:
+        if raw_choice.isdigit():
+            idx = int(raw_choice) - 1
+            if 0 <= idx < len(PERSONALITIES):
+                selected_personality = PERSONALITIES[idx]
+            else:
+                console.print(
+                    f"[yellow]Invalid choice '{raw_choice}' — using The Sage.[/yellow]"
+                )
+        else:
+            try:
+                selected_personality = get_personality(raw_choice)
+            except ValueError:
+                console.print(
+                    f"[yellow]Unknown personality '{raw_choice}' — using The Sage.[/yellow]"
+                )
+    console.print(
+        f"[dim]Playing with:[/dim] [bold white]{selected_personality.name}[/bold white]  "
+        f"[dim]{selected_personality.description}[/dim]"
+    )
+    log.info("Personality selected: '%s'", selected_personality.name)
     log.info(
         "Session ready: model='%s' context_window=%d",
         settings.dm_model,
@@ -258,7 +312,7 @@ def run(
     provider: Optional[str] = typer.Option(
         None,
         "--provider",
-        help="Override LLM_PROVIDER (e.g. 'ollama').",
+        help="Override LLM_PROVIDER (e.g. 'llamacpp').",
         metavar="PROVIDER",
     ),
     model: Optional[str] = typer.Option(

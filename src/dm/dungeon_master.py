@@ -28,6 +28,7 @@ from src.config import settings as _default_settings
 from src.dice.roller import parse_roll_tags, roll, substitute_rolls
 from src.dm.context_builder import build_system_prompt, detect_narrative_state
 from src.dm.memory.manager import MemoryManager
+from src.dm.personality import DEFAULT_PERSONALITY, DMPersonality
 from src.llm.base import LLMProvider
 from src.rules.loader import RulesReference
 from src.rules.reference import NarrativeState
@@ -57,6 +58,10 @@ class DungeonMaster:
         ``load()`` must be called before the first ``respond()`` call.
     settings:
         Application settings.  Defaults to the module-level singleton.
+    personality:
+        Active :class:`~src.dm.personality.DMPersonality`.  Defaults to
+        :data:`~src.dm.personality.DEFAULT_PERSONALITY` (The Sage) when
+        ``None`` is passed.
     """
 
     def __init__(
@@ -66,12 +71,14 @@ class DungeonMaster:
         rules: RulesReference,
         memory: MemoryManager,
         settings: Optional[Settings] = None,
+        personality: Optional[DMPersonality] = None,
     ) -> None:
         self._llm = llm
         self._campaign = campaign
         self._rules = rules
         self._memory = memory
         self._settings = settings or _default_settings
+        self._personality: DMPersonality = personality or DEFAULT_PERSONALITY
         self._turn: int = 0
         self._state: NarrativeState = NarrativeState.EXPLORATION
         self._last_roll_results: list = []
@@ -168,6 +175,7 @@ class DungeonMaster:
             state=self._state,
             current_text="",
             token_budget=self._system_prompt_budget(),
+            personality=self._personality,
         )
         messages = [
             {"role": "system", "content": system_prompt},
@@ -227,6 +235,7 @@ class DungeonMaster:
             state=self._state,
             current_text=player_input,
             token_budget=self._system_prompt_budget(),
+            personality=self._personality,
         )
 
         session_msgs = self._trim_session_to_budget(
@@ -299,6 +308,21 @@ class DungeonMaster:
         The CLI uses this to render styled dice panels after each DM response.
         """
         return self._last_roll_results
+
+    @property
+    def personality(self) -> DMPersonality:
+        """The currently active :class:`~src.dm.personality.DMPersonality`."""
+        return self._personality
+
+    def set_personality(self, personality: DMPersonality) -> None:
+        """
+        Switch to a new personality.
+
+        Takes effect from the next :meth:`respond` or :meth:`respond_stream`
+        call — the current turn is not affected.
+        """
+        log.info("Personality changed: '%s' → '%s'", self._personality.name, personality.name)
+        self._personality = personality
 
     @property
     def campaign(self) -> "ParsedCampaign":
@@ -399,6 +423,7 @@ class DungeonMaster:
             state=self._state,
             current_text=player_input,
             token_budget=self._system_prompt_budget(),
+            personality=self._personality,
         )
 
         session_msgs = self._trim_session_to_budget(

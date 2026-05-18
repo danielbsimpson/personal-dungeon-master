@@ -55,7 +55,7 @@ class LLMProvider(ABC):
 
         The default implementation delegates to :meth:`complete` and yields
         the full reply as a single chunk.  Providers that support native
-        streaming (e.g. :class:`~src.llm.ollama_provider.OllamaProvider`)
+        streaming (e.g. :class:`~src.llm.llamacpp_provider.LlamaCppProvider`)
         should override this to yield incremental tokens.
 
         Args:

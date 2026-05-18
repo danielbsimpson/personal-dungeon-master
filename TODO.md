@@ -343,25 +343,25 @@ Give the player six distinct Dungeon Master personalities to choose from at star
 
 ### Tasks
 
-- [ ] `src/dm/personality.py`
-  - [ ] Define `DMPersonality` dataclass: `name: str`, `description: str`, `system_prompt_directive: str`, `verbosity: Literal["concise", "balanced", "verbose"]`, `tone: Literal["harsh", "neutral", "kind"]`
-  - [ ] Define `PERSONALITIES: list[DMPersonality]` — the six named personalities above, each with a full `system_prompt_directive` paragraph describing the expected DM behaviour
-  - [ ] Implement `get_personality(name: str) -> DMPersonality` — case-insensitive lookup; raise a clear, user-friendly error for unknown names
-  - [ ] Default personality is **The Sage**
-- [ ] `src/dm/context_builder.py`
-  - [ ] Accept an optional `personality: DMPersonality | None` parameter
-  - [ ] Inject `personality.system_prompt_directive` as a `## DM Personality` block immediately after the core DM persona section in the system prompt
-- [ ] `src/main.py`
-  - [ ] After campaign selection, display the personality menu (name, tone, verbosity, one-line description) using `rich`
-  - [ ] Prompt the player to choose; default to **The Sage** on empty input
-  - [ ] Pass the selected personality through to `DungeonMaster` and `context_builder`
-- [ ] `src/interface/cli.py`
-  - [ ] Add `/personality` command — display current personality, list all six options, prompt to switch; new personality takes effect from the next DM response
-  - [ ] Display the active personality name in the session header banner
-- [ ] Write unit tests in `tests/test_dm.py`
-  - [ ] Test that each personality’s `system_prompt_directive` appears in the built system prompt
-  - [ ] Test that `get_personality` raises a clear error for unknown names
-  - [ ] Test that omitting a personality defaults to **The Sage**
+- [x] `src/dm/personality.py`
+  - [x] Define `DMPersonality` dataclass: `name: str`, `description: str`, `system_prompt_directive: str`, `verbosity: Literal["concise", "balanced", "verbose"]`, `tone: Literal["harsh", "neutral", "kind"]`
+  - [x] Define `PERSONALITIES: list[DMPersonality]` — the six named personalities above, each with a full `system_prompt_directive` paragraph describing the expected DM behaviour
+  - [x] Implement `get_personality(name: str) -> DMPersonality` — case-insensitive lookup; raise a clear, user-friendly error for unknown names
+  - [x] Default personality is **The Sage**
+- [x] `src/dm/context_builder.py`
+  - [x] Accept an optional `personality: DMPersonality | None` parameter
+  - [x] Inject `personality.system_prompt_directive` as a `## DM Personality` block immediately after the core DM persona section in the system prompt
+- [x] `src/main.py`
+  - [x] After campaign selection, display the personality menu (name, tone, verbosity, one-line description) using `rich`
+  - [x] Prompt the player to choose; default to **The Sage** on empty input
+  - [x] Pass the selected personality through to `DungeonMaster` and `context_builder`
+- [x] `src/interface/cli.py`
+  - [x] Add `/personality` command — display current personality, list all six options, prompt to switch; new personality takes effect from the next DM response
+  - [x] Display the active personality name in the session header banner
+- [x] Write unit tests in `tests/test_dm.py`
+  - [x] Test that each personality's `system_prompt_directive` appears in the built system prompt
+  - [x] Test that `get_personality` raises a clear error for unknown names
+  - [x] Test that omitting a personality defaults to **The Sage**
 
 ---
 

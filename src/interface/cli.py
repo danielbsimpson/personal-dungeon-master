@@ -40,6 +40,7 @@ from src.dice.die import RollResult
 from src.dice.roller import format_result, parse_player_expression, roll
 from src.dm.dungeon_master import DungeonMaster
 from src.dm.memory.manager import MemoryManager
+from src.dm.personality import PERSONALITIES, get_personality
 from src.rules.loader import RulesReference
 from src.rules.reference import search_rules
 
@@ -64,6 +65,7 @@ _COMMANDS: dict[str, str] = {
     "/roll <expr>": "Roll dice  e.g. /roll d20+3  /roll 2d6",
     "/graph <entity>": "Look up an entity in the knowledge graph",
     "/rules <topic>": "Look up a rules topic  e.g. /rules grapple  /rules concentration",
+    "/personality": "View or switch the active DM personality",
 }
 
 
@@ -410,6 +412,73 @@ def _cmd_rules(rules: RulesReference, topic: str) -> None:
     console.print()
 
 
+def _cmd_personality(dm: DungeonMaster) -> None:
+    """Display current personality, list all options, and optionally switch."""
+    current = dm.personality
+
+    # Show current
+    console.print()
+    console.print(
+        Panel(
+            f"[bold white]{current.name}[/bold white]  "
+            f"[dim]{current.tone} · {current.verbosity}[/dim]\n"
+            f"{current.description}",
+            title="[bold magenta]Active DM Personality[/bold magenta]",
+            border_style="magenta",
+            padding=(0, 2),
+            expand=False,
+        )
+    )
+
+    # List all options
+    table = Table(
+        box=box.ROUNDED,
+        border_style="dim",
+        show_header=True,
+        header_style="bold cyan",
+    )
+    table.add_column("#", style="bold cyan", width=3, justify="right")
+    table.add_column("Name", style="bold white", no_wrap=True)
+    table.add_column("Tone", style="dim", width=9)
+    table.add_column("Verbosity", style="dim", width=10)
+    table.add_column("Description", style="white", overflow="fold")
+    for i, p in enumerate(PERSONALITIES, start=1):
+        marker = " ◀" if p.name == current.name else ""
+        table.add_row(str(i), p.name + marker, p.tone, p.verbosity, p.description)
+    console.print(table)
+    console.print()
+
+    choice = Prompt.ask(
+        "[bold cyan]Switch to[/bold cyan] [dim](number, name, or Enter to keep current)[/dim]",
+        default="",
+    ).strip()
+
+    if not choice:
+        return
+
+    new_personality = None
+    if choice.isdigit():
+        idx = int(choice) - 1
+        if 0 <= idx < len(PERSONALITIES):
+            new_personality = PERSONALITIES[idx]
+        else:
+            console.print(f"[red]Invalid choice '{choice}'.[/red]")
+            return
+    else:
+        try:
+            new_personality = get_personality(choice)
+        except ValueError as exc:
+            console.print(f"[red]{exc}[/red]")
+            return
+
+    dm.set_personality(new_personality)
+    console.print(
+        f"[green]Personality switched to[/green] [bold white]{new_personality.name}[/bold white]. "
+        "[dim]Takes effect from the next DM response.[/dim]"
+    )
+    console.print()
+
+
 def _confirm(prompt: str) -> bool:
     return Confirm.ask(f"[bold yellow]{prompt}[/bold yellow]", default=False)
 
@@ -441,9 +510,14 @@ async def run_session(
     rules = rules or dm.rules
     character = dm.campaign.character
 
-    # Opening narration
+    # Opening narration — show active personality in the banner
     console.print()
-    console.print(Rule("[dim]The adventure begins…[/dim]", style="dim green"))
+    console.print(
+        Rule(
+            f"[dim]The adventure begins… [/dim][dim italic]DM: {dm.personality.name}[/dim]",
+            style="dim green",
+        )
+    )
     with console.status("[green]The DM is setting the scene…[/green]", spinner="dots"):
         opening = await dm.start_campaign()
     print_roll_results(dm.last_roll_results)
@@ -492,6 +566,10 @@ async def run_session(
 
             if lower.startswith("/roll "):
                 _cmd_roll(raw[6:].strip())
+                continue
+
+            if lower == "/personality":
+                _cmd_personality(dm)
                 continue
 
             if lower == "/save":

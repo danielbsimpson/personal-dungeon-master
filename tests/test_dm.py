@@ -1,4 +1,4 @@
-"""Tests for the DM agent core (Phase 6)."""
+"""Tests for the DM agent core (Phase 6 + Phase 11)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import pytest
 from src.campaign.parser import AbilityScores, Character, Creature, ParsedCampaign
 from src.dm.context_builder import build_system_prompt, detect_narrative_state
 from src.dm.dungeon_master import DungeonMaster
+from src.dm.personality import DEFAULT_PERSONALITY, PERSONALITIES, get_personality
 from src.dm.spoiler_guard import revealed_text
 from src.rules.loader import RulesReference
 from src.rules.reference import NarrativeState
@@ -427,3 +428,121 @@ class TestSplitSafeText:
         assert "[ROLL:" not in safe
         assert remaining == ""
         assert len(results) == 2
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestPersonality (Phase 11)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestGetPersonality:
+    def test_returns_personality_by_exact_name(self):
+        p = get_personality("The Sage")
+        assert p.name == "The Sage"
+
+    def test_lookup_is_case_insensitive(self):
+        assert get_personality("the bard") == get_personality("The Bard")
+        assert get_personality("THE WARDEN") == get_personality("The Warden")
+
+    def test_raises_for_unknown_name(self):
+        with pytest.raises(ValueError, match="Unknown DM personality"):
+            get_personality("The Robot")
+
+    def test_error_message_lists_valid_options(self):
+        with pytest.raises(ValueError, match="The Sage"):
+            get_personality("nonexistent")
+
+    def test_default_personality_is_the_sage(self):
+        assert DEFAULT_PERSONALITY.name == "The Sage"
+
+    def test_all_six_personalities_defined(self):
+        names = {p.name for p in PERSONALITIES}
+        assert names == {
+            "The Sage",
+            "The Chronicler",
+            "The Bard",
+            "The Tactician",
+            "The Warden",
+            "The Mentor",
+        }
+
+    def test_every_personality_has_non_empty_directive(self):
+        for p in PERSONALITIES:
+            assert p.system_prompt_directive.strip(), (
+                f"{p.name} has an empty system_prompt_directive"
+            )
+
+    def test_directive_contains_personality_name(self):
+        for p in PERSONALITIES:
+            assert p.name in p.system_prompt_directive, (
+                f"{p.name}'s directive does not reference its own name"
+            )
+
+
+class TestPersonalityInSystemPrompt:
+    """Verify that personality directives are injected into the system prompt."""
+
+    async def test_directive_appears_in_prompt(self):
+        campaign = _make_campaign()
+        rules = _make_rules()
+        memory = _make_memory()
+
+        for personality in PERSONALITIES:
+            prompt = await build_system_prompt(
+                campaign, rules, memory, personality=personality
+            )
+            # The directive header must be present.
+            assert f"DM Personality — {personality.name}" in prompt, (
+                f"Directive for '{personality.name}' missing from system prompt"
+            )
+
+    async def test_no_personality_omits_directive_block(self):
+        campaign = _make_campaign()
+        rules = _make_rules()
+        memory = _make_memory()
+
+        prompt = await build_system_prompt(campaign, rules, memory, personality=None)
+        assert "DM Personality" not in prompt
+
+    async def test_default_personality_applied_when_none_passed_to_dm(self):
+        """DungeonMaster defaults to The Sage when no personality is supplied."""
+        llm = MagicMock()
+        llm.complete = MagicMock(return_value="Welcome!")
+        llm.context_window = 4096
+        dm = DungeonMaster(llm, _make_campaign(), _make_rules(), _make_memory())
+        assert dm.personality.name == "The Sage"
+
+    async def test_explicit_personality_stored_on_dm(self):
+        bard = get_personality("The Bard")
+        llm = MagicMock()
+        llm.complete = MagicMock(return_value="Welcome!")
+        llm.context_window = 4096
+        dm = DungeonMaster(
+            llm, _make_campaign(), _make_rules(), _make_memory(), personality=bard
+        )
+        assert dm.personality is bard
+
+    async def test_set_personality_changes_active_personality(self):
+        llm = MagicMock()
+        llm.complete = MagicMock(return_value="Welcome!")
+        llm.context_window = 4096
+        dm = DungeonMaster(llm, _make_campaign(), _make_rules(), _make_memory())
+        assert dm.personality.name == "The Sage"
+
+        warden = get_personality("The Warden")
+        dm.set_personality(warden)
+        assert dm.personality is warden
+
+    async def test_personality_directive_in_respond_system_prompt(self):
+        """respond() passes the personality to the system prompt."""
+        tactician = get_personality("The Tactician")
+        llm = MagicMock()
+        llm.complete = MagicMock(return_value="You proceed.")
+        llm.context_window = 4096
+        dm = DungeonMaster(
+            llm, _make_campaign(), _make_rules(), _make_memory(), personality=tactician
+        )
+        await dm.respond("I look around.")
+        messages = llm.complete.call_args[0][0]
+        system_prompt = messages[0]["content"]
+        assert "The Tactician" in system_prompt

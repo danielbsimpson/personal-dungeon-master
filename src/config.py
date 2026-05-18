@@ -35,20 +35,21 @@ class Settings(BaseSettings):
     )
 
     # ── LLM provider ─────────────────────────────────────────────────────────
-    llm_provider: str = "ollama"
-    """Which LLM backend to use: 'ollama' (default) or 'openai' (Phase 13)."""
+    llm_provider: str = "llamacpp"
+    """Which LLM backend to use: 'llamacpp' (default) or 'openai' (Phase 13)."""
 
     openai_api_key: str = ""
     """Required when llm_provider='openai'."""
 
-    ollama_base_url: str = "http://localhost:11434"
-    """Base URL for the Ollama service. Required when llm_provider='ollama'."""
+    llamacpp_base_url: str = "http://localhost:8080"
+    """Base URL for the llama.cpp server. Required when llm_provider='llamacpp'."""
 
     dm_model: str = ""
     """
     Model name to use for the DM agent.
-    Defaults to empty — when provider is 'ollama' and this is unset, an
-    interactive model picker will be presented at startup.
+    Defaults to empty — when provider is 'llamacpp' and this is unset, the
+    model is auto-detected from the running server (or chosen interactively
+    if multiple models are available in router mode).
     """
 
     # ── Rules ─────────────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ class Settings(BaseSettings):
     """Number of most-recent messages kept in the short-term session window."""
 
     embedding_model: str = "nomic-embed-text"
-    """Ollama model to use for Graphiti entity embeddings."""
+    """Embedding model name to use for Graphiti entity embeddings."""
 
     embedding_dim: int = 768
     """Embedding vector dimension. Must match the chosen embedding_model."""
@@ -89,9 +90,9 @@ class Settings(BaseSettings):
     @classmethod
     def _validate_provider(cls, v: str) -> str:
         v = v.lower().strip()
-        if v not in {"openai", "ollama"}:
+        if v not in {"openai", "llamacpp"}:
             raise ValueError(
-                f"LLM_PROVIDER must be 'openai' or 'ollama', got '{v}'."
+                f"LLM_PROVIDER must be 'openai' or 'llamacpp', got '{v}'."
             )
         return v
 
