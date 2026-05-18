@@ -9,7 +9,9 @@ Both are stored in memory at session start; the index is persisted to disk
 at ``memory/<campaign_name>/campaign_index.pkl`` so it does not rebuild on
 every session start.
 
-Phase E (Fusion retrieval) will extend CampaignIndex.retrieve with BM25.
+Phase E adds a BM25 keyword index (``bm25_index``) that is fused with the
+semantic results via Reciprocal Rank Fusion when ``query_text`` is supplied
+to ``retrieve()``.
 """
 
 from __future__ import annotations
@@ -22,7 +24,9 @@ from typing import Awaitable, Callable
 
 import numpy as np
 
+from src.campaign.bm25_index import BM25CampaignIndex
 from src.campaign.chunker import CampaignChunk
+from src.campaign.fusion import rrf
 from src.campaign.header import with_header
 
 log = logging.getLogger(__name__)
@@ -46,6 +50,9 @@ class CampaignIndex:
     act_summaries: list[ActSummary]
     chunks: list[CampaignChunk]
     chunk_embeddings: list[list[float]] = field(default_factory=list, repr=False)
+    # Phase E: BM25 keyword index built alongside the embedding index.
+    # ``None`` on old pickled instances — handled gracefully in retrieve().
+    bm25_index: BM25CampaignIndex | None = field(default=None, repr=False)
 
     # ── Construction ──────────────────────────────────────────────────────────
 
@@ -109,6 +116,9 @@ class CampaignIndex:
         # Embed in batches to avoid memory issues with very long campaigns
         chunk_embeddings = await embed_fn(chunk_texts)
 
+        # 5. Build BM25 keyword index (Phase E)
+        bm25_idx = BM25CampaignIndex(chunks)
+
         log.info(
             "Campaign index built: %d acts, %d chunks.", len(act_summaries), len(chunks)
         )
@@ -116,6 +126,7 @@ class CampaignIndex:
             act_summaries=act_summaries,
             chunks=chunks,
             chunk_embeddings=chunk_embeddings,
+            bm25_index=bm25_idx,
         )
 
     # ── Retrieval ─────────────────────────────────────────────────────────────
@@ -126,19 +137,26 @@ class CampaignIndex:
         progress_index: int,
         top_acts: int = 2,
         top_chunks: int = 5,
+        query_text: str = "",
     ) -> list[CampaignChunk]:
         """
-        Two-pass hierarchical retrieval.
+        Two-pass hierarchical retrieval, optionally fused with BM25 (Phase E).
 
         Pass 1: Find the most relevant acts from the coarse tier.
         Pass 2: Retrieve fine-grained chunks within those acts, respecting
                 the spoiler guard (only chunks whose index <= progress_index).
+        Fusion: When ``query_text`` is non-empty and a BM25 index is present,
+                semantic and keyword results are merged via Reciprocal Rank
+                Fusion before returning.
 
         Args:
             query_embedding: Embedding vector for the player's current input.
             progress_index: Spoiler guard — only chunks up to this index.
             top_acts: Number of acts to consider in pass 1.
             top_chunks: Maximum number of chunks to return.
+            query_text: Raw player input string.  When non-empty, BM25
+                retrieval is performed and results are fused with the
+                semantic results via RRF.
 
         Returns:
             Ordered list of the most relevant CampaignChunks.
@@ -180,7 +198,23 @@ class CampaignIndex:
             for i, c in candidate_chunks
         ]
         chunk_scores.sort(key=lambda x: x[0], reverse=True)
-        return [c for _, c in chunk_scores[:top_chunks]]
+        semantic_results = [c for _, c in chunk_scores[: top_chunks * 2]]
+
+        # Phase E: fuse with BM25 when query_text is provided.
+        bm25_idx: BM25CampaignIndex | None = getattr(self, "bm25_index", None)
+        if query_text and bm25_idx is not None:
+            keyword_results = bm25_idx.search(
+                query_text,
+                top_k=top_chunks * 2,
+                progress_index=progress_index,
+            )
+            return rrf(
+                semantic_results=semantic_results,
+                keyword_results=keyword_results,
+                top_n=top_chunks,
+            )
+
+        return semantic_results[:top_chunks]
 
     # ── Persistence ───────────────────────────────────────────────────────────
 

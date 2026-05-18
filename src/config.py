@@ -78,6 +78,21 @@ class Settings(BaseSettings):
     graphiti_telemetry_enabled: bool = False
     """Whether to send anonymous telemetry to Graphiti/Zep."""
 
+    # ── Contextual compression (Phase F) ─────────────────────────────────────
+    compression_enabled: bool = True
+    """
+    Master switch for Phase F contextual compression.
+    Set to False to disable LLM compression of retrieved segments (useful when
+    debugging retrieval quality or running on slow hardware).
+    """
+
+    compression_max_passage_tokens: int = 800
+    """
+    Approximate upper bound on each retrieved segment's length before it is
+    sent to the compressor LLM.  Uses a 4-chars-per-token heuristic.
+    Reduces the compressor prompt size for very long segments.
+    """
+
     # ── Semantic chunking (Phase A) ───────────────────────────────────────────
     chunk_breakpoint_threshold: float = 0.75
     """

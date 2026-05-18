@@ -18,9 +18,9 @@ how to verify correctness.
 3. [Phase B — Contextual chunk headers](#3-phase-b--contextual-chunk-headers) ✅
 4. [Phase C — Hierarchical indices](#4-phase-c--hierarchical-indices) ✅
 5. [Phase D — Relevant segment extraction](#5-phase-d--relevant-segment-extraction) ✅
-6. [Phase E — Fusion retrieval for the campaign index](#6-phase-e--fusion-retrieval-for-the-campaign-index) ⬜
-7. [Phase F — Contextual compression](#7-phase-f--contextual-compression) ⬜
-8. [Phase G — Adaptive retrieval by NarrativeState](#8-phase-g--adaptive-retrieval-by-narrativestate) ⬜
+6. [Phase E — Fusion retrieval for the campaign index](#6-phase-e--fusion-retrieval-for-the-campaign-index) ✅
+7. [Phase F — Contextual compression](#7-phase-f--contextual-compression) ✅
+8. [Phase G — Adaptive retrieval by NarrativeState](#8-phase-g--adaptive-retrieval-by-narrativestate) ✅
 9. [Phase H — RAPTOR over player history](#9-phase-h--raptor-over-player-history) ⬜
 10. [Phase I — MemoRAG for long campaigns](#10-phase-i--memorag-for-long-campaigns) ⬜
 11. [Other techniques to explore if necessary](#11-other-techniques-to-explore-if-necessary)
@@ -811,7 +811,12 @@ def test_distant_chunks_are_not_merged():
 
 ## 6. Phase E — Fusion retrieval for the campaign index ⬜ TODO
 
-> **Status:** Not yet implemented. `rank-bm25` is already in `requirements.txt`. When implemented, `CampaignIndex.retrieve()` will be extended to accept `query_text` and fuse BM25 results with semantic results via RRF.
+> **Status:** Implemented in `src/campaign/bm25_index.py` (BM25 index) and
+> `src/campaign/fusion.py` (RRF). `BM25CampaignIndex` is built inside
+> `CampaignIndex.build()` and pickled with the index. `CampaignIndex.retrieve()`
+> accepts `query_text` and calls RRF when a BM25 index is present. Wired into
+> `context_builder.py` via the `query_text=query` argument. Tested in
+> `tests/test_chunker.py`.
 
 ### What it is
 
@@ -961,7 +966,13 @@ def test_rrf_combines_ranks():
 
 ## 7. Phase F — Contextual compression ⬜ TODO
 
-> **Status:** Not yet implemented. Will add `src/campaign/compressor.py` and a `COMPRESSION_ENABLED` config flag. No new dependencies required.
+> **Status:** Implemented in `src/campaign/compressor.py`. `compress()` is an
+> async helper that calls the LLM to extract relevant sentences from each
+> retrieved segment. Controlled by `COMPRESSION_ENABLED` and
+> `COMPRESSION_MAX_PASSAGE_TOKENS` in `src/config.py`. Wired into
+> `context_builder.py` (applied per-segment when `retrieval_cfg.compress` is
+> `True` and `llm_fn` is supplied). `DungeonMaster` passes `llm_fn` via
+> `_make_llm_fn()`. Tested in `tests/test_chunker.py`.
 
 ### What it is
 
@@ -1080,7 +1091,11 @@ def test_compression_falls_back_on_none():
 
 ## 8. Phase G — Adaptive retrieval by NarrativeState ⬜ TODO
 
-> **Status:** Not yet implemented. Will add `src/dm/retrieval_config.py` with per-`NarrativeState` retrieval parameters, then thread `config` into `context_builder.py`'s retrieval calls.
+> **Status:** Implemented in `src/dm/retrieval_config.py`. `RetrievalConfig`
+> and `get_retrieval_config()` are imported in `context_builder.py` and used
+> to drive all per-turn retrieval parameters (`top_acts`, `top_chunks`,
+> `adjacency_window`, `graph_results`, `compress`). `MemoryManager.get_context()`
+> now accepts `num_results`. Tested in `tests/test_chunker.py`.
 
 ### What it is
 

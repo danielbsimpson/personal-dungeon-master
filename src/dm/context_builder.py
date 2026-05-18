@@ -4,12 +4,14 @@ each turn.
 
 The system prompt is built from these sections (in order):
   1. DM persona and behavioural instructions
-  2. Relevant rules for the current narrative state
+  2. Relevant rules for the current narrative state (Phase G: state-adaptive)
   3. Campaign summary
   4. Player character sheet
   5. Creature reference
-  6. Revealed campaign book (via spoiler guard)
-  7. Retrieved graph memory (via MemoryManager.get_context)
+  6. Revealed campaign book (via hierarchical index + RSE + BM25 fusion +
+     optional contextual compression — Phases C–F)
+  7. Retrieved graph memory (via MemoryManager.get_context, Phase G: adaptive
+     graph_results count)
 
 The session window (short-term messages) is NOT part of the system prompt —
 it is passed separately as the ``messages`` list in the LLM call.
@@ -17,18 +19,21 @@ it is passed separately as the ``messages`` list in the LLM call.
 Public API
 ----------
 detect_narrative_state(text) -> NarrativeState
-build_system_prompt(campaign, rules, memory, state, current_text, token_budget) -> str
+build_system_prompt(campaign, rules, memory, state, current_text, token_budget,
+                    personality, llm_fn) -> str
 """
 
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Awaitable, Callable
 
+from src.campaign.compressor import compress
 from src.campaign.parser import Character, Creature, ParsedCampaign
 from src.campaign.segment_extractor import extract_segments
 from src.dm.memory.manager import MemoryManager
 from src.dm.personality import DMPersonality
+from src.dm.retrieval_config import RetrievalConfig, get_retrieval_config
 from src.dm.spoiler_guard import revealed_text
 from src.rules.loader import RulesReference
 from src.rules.reference import NarrativeState, get_relevant_rules
@@ -178,6 +183,7 @@ async def build_system_prompt(
     current_text: str = "",
     token_budget: int = _DEFAULT_TOKEN_BUDGET,
     personality: DMPersonality | None = None,
+    llm_fn: Callable[[str], Awaitable[str]] | None = None,
 ) -> str:
     """
     Assemble the full system prompt for a DM turn.
@@ -191,20 +197,32 @@ async def build_system_prompt(
     memory:
         Initialised :class:`MemoryManager` — ``load()`` must have been called.
     state:
-        Current narrative state — drives which rules sections are included.
+        Current narrative state — drives which rules sections are included
+        and which :class:`~src.dm.retrieval_config.RetrievalConfig` is used
+        (Phase G).
     current_text:
-        The player's current input, used for keyword-based rules selection and
-        as the graph search query.
+        The player's current input, used for keyword-based rules selection,
+        as the graph search query, and as the BM25 query (Phase E).
     token_budget:
         Approximate maximum token count for the system prompt.  When the
         assembled prompt exceeds this, the revealed campaign text is truncated
         to fit within budget (keeping the most recent content).
+    personality:
+        Optional :class:`~src.dm.personality.DMPersonality` to append a
+        persona directive to the system prompt.
+    llm_fn:
+        Optional async callable ``(prompt: str) -> str`` used for contextual
+        compression (Phase F).  When ``None`` or when
+        ``RetrievalConfig.compress`` is ``False``, compression is skipped.
 
     Returns
     -------
     str
         The complete system prompt string.
     """
+    # Phase G: select retrieval parameters based on the current narrative state.
+    retrieval_cfg: RetrievalConfig = get_retrieval_config(state)
+
     # 1. DM persona + optional personality directive
     persona_section = _DM_PERSONA.strip()
     if personality is not None:
@@ -225,8 +243,10 @@ async def build_system_prompt(
         f"## CREATURE REFERENCE\n\n{_format_creatures(campaign.creatures)}"
     )
 
-    # 6. Campaign book — use hierarchical index + RSE (Phases A–D) when available,
-    #    otherwise fall back to the spoiler-guarded scene window.
+    # 6. Campaign book — use hierarchical index + RSE + BM25 fusion (Phases A–E)
+    #    when available, with optional contextual compression (Phase F).
+    #    Parameters are driven by the current NarrativeState (Phase G).
+    #    Falls back to the spoiler-guarded scene window when the index is absent.
     query = current_text or campaign.summary
     if campaign.index is not None and campaign.chunks:
         try:
@@ -234,17 +254,37 @@ async def build_system_prompt(
             _embed_raw = await memory.embed([query])
             query_embedding = _embed_raw[0] if _embed_raw else []
             if query_embedding:
+                # Phase E: pass query_text so BM25 fusion is applied.
+                # Phase G: use state-driven top_acts / top_chunks.
                 retrieved_chunks = campaign.index.retrieve(
                     query_embedding=query_embedding,
                     progress_index=memory.campaign_progress,
-                    top_acts=2,
-                    top_chunks=5,
+                    top_acts=retrieval_cfg.top_acts,
+                    top_chunks=retrieval_cfg.top_chunks,
+                    query_text=query,
                 )
+                # Phase D + G: RSE with state-driven adjacency window.
                 segments = extract_segments(
                     retrieved=retrieved_chunks,
                     all_chunks=campaign.chunks,
                     all_embeddings=campaign.index.chunk_embeddings,
+                    max_window=retrieval_cfg.adjacency_window,
                 )
+                # Phase F + G: compress when enabled for this state.
+                if segments and retrieval_cfg.compress and llm_fn is not None:
+                    from src.config import settings as _cfg
+                    if _cfg.compression_enabled:
+                        compressed: list[str] = []
+                        for seg in segments:
+                            compressed.append(
+                                await compress(
+                                    seg,
+                                    query,
+                                    llm_fn,
+                                    max_passage_tokens=_cfg.compression_max_passage_tokens,
+                                )
+                            )
+                        segments = compressed
                 book_text = "\n\n---\n\n".join(segments) if segments else ""
                 book_section_title = "## CAMPAIGN BOOK (retrieved context)"
             else:
@@ -258,7 +298,10 @@ async def build_system_prompt(
         book_section_title = "## CAMPAIGN BOOK (revealed scenes)"
 
     book_section = f"{book_section_title}\n\n{book_text.strip()}"
-    memory_ctx = await memory.get_context(query, group_id="")
+    # Phase G: use state-driven graph_results count.
+    memory_ctx = await memory.get_context(
+        query, group_id="", num_results=retrieval_cfg.graph_results
+    )
     memory_section = f"## MEMORY\n\n{memory_ctx}" if memory_ctx else ""
 
     # Assemble — memory section is omitted when empty

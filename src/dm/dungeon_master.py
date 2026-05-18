@@ -18,6 +18,7 @@ Usage
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
 from typing import Optional
@@ -176,6 +177,7 @@ class DungeonMaster:
             current_text="",
             token_budget=self._system_prompt_budget(),
             personality=self._personality,
+            llm_fn=self._make_llm_fn(),
         )
         messages = [
             {"role": "system", "content": system_prompt},
@@ -236,6 +238,7 @@ class DungeonMaster:
             current_text=player_input,
             token_budget=self._system_prompt_budget(),
             personality=self._personality,
+            llm_fn=self._make_llm_fn(),
         )
 
         session_msgs = self._trim_session_to_budget(
@@ -272,6 +275,20 @@ class DungeonMaster:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _make_llm_fn(self):
+        """Return an async callable ``(prompt: str) -> str`` wrapping the
+        synchronous LLM provider.  Used for Phase F contextual compression."""
+        llm = self._llm
+        loop = asyncio.get_event_loop()
+
+        async def _llm_fn(prompt: str) -> str:
+            return await loop.run_in_executor(
+                None,
+                lambda: llm.complete([{"role": "user", "content": prompt}]),
+            )
+
+        return _llm_fn
 
     def _maybe_advance_progress(self, dm_response: str) -> None:
         """
@@ -424,6 +441,7 @@ class DungeonMaster:
             current_text=player_input,
             token_budget=self._system_prompt_budget(),
             personality=self._personality,
+            llm_fn=self._make_llm_fn(),
         )
 
         session_msgs = self._trim_session_to_budget(
