@@ -8,8 +8,12 @@ pydantic-settings>=2.0
 graphiti-core[kuzu]>=0.28
 numpy>=1.24.0
 
-# Phase A — semantic chunking (install early; also needed for Phase E BM25 fusion)
+# Phase A — semantic chunking (also needed for Phase E BM25 fusion)
 rank-bm25>=0.2.2
+
+# Phase H — RAPTOR GMM clustering
+scikit-learn>=1.5.0
+scipy>=1.13.0
 
 # Test dependencies
 pytest>=9.0

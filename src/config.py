@@ -93,6 +93,29 @@ class Settings(BaseSettings):
     Reduces the compressor prompt size for very long segments.
     """
 
+    # ── RAPTOR — Phase H ──────────────────────────────────────────────────────
+    raptor_enabled: bool = True
+    """Master switch for Phase H RAPTOR tree over episode history."""
+
+    raptor_rebuild_every: int = 10
+    """Number of turns between automatic RAPTOR tree rebuilds in respond()."""
+
+    raptor_max_clusters: int = 10
+    """Maximum number of GMM clusters per tree level."""
+
+    raptor_top_k_retrieval: int = 3
+    """Number of RAPTOR nodes to include in get_context() results."""
+
+    # ── MemoRAG — Phase I ─────────────────────────────────────────────────────
+    memorag_enabled: bool = True
+    """Master switch for Phase I MemoRAG session-end clue generation."""
+
+    memorag_clues_per_session: int = 5
+    """Number of memory clues to extract per session via end_of_session()."""
+
+    memorag_top_k: int = 3
+    """Number of clues to inject into the retrieval query via augment_query()."""
+
     # ── Semantic chunking (Phase A) ───────────────────────────────────────────
     chunk_breakpoint_threshold: float = 0.75
     """

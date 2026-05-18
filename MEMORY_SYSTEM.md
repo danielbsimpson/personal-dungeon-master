@@ -21,8 +21,8 @@ how to verify correctness.
 6. [Phase E — Fusion retrieval for the campaign index](#6-phase-e--fusion-retrieval-for-the-campaign-index) ✅
 7. [Phase F — Contextual compression](#7-phase-f--contextual-compression) ✅
 8. [Phase G — Adaptive retrieval by NarrativeState](#8-phase-g--adaptive-retrieval-by-narrativestate) ✅
-9. [Phase H — RAPTOR over player history](#9-phase-h--raptor-over-player-history) ⬜
-10. [Phase I — MemoRAG for long campaigns](#10-phase-i--memorag-for-long-campaigns) ⬜
+9. [Phase H — RAPTOR over player history](#9-phase-h--raptor-over-player-history) ✅
+10. [Phase I — MemoRAG for long campaigns](#10-phase-i--memorag-for-long-campaigns) ✅
 11. [Other techniques to explore if necessary](#11-other-techniques-to-explore-if-necessary)
 
 ---
@@ -1236,9 +1236,9 @@ def test_all_states_have_configs():
 
 ---
 
-## 9. Phase H — RAPTOR over player history ⬜ TODO
+## 9. Phase H — RAPTOR over player history ✅ COMPLETE
 
-> **Status:** Not yet implemented. Requires `scipy`, `scikit-learn`, and `umap-learn`. Will add `src/dm/memory/raptor.py` and integrate into `MemoryManager.get_context()`.
+> **Status:** Implemented in `src/dm/memory/raptor.py`. Integrated into `MemoryManager.get_context()`, `rebuild_raptor()`, and `end_of_session()`. Periodic rebuild triggered every `raptor_rebuild_every` turns in `DungeonMaster.respond()`. Tested in `tests/test_raptor_memorag.py`.
 
 ### What it is
 
@@ -1512,9 +1512,9 @@ def test_raptor_persists_and_reloads(tmp_path):
 
 ---
 
-## 10. Phase I — MemoRAG for long campaigns ⬜ TODO
+## 10. Phase I — MemoRAG for long campaigns ✅ COMPLETE
 
-> **Status:** Not yet implemented. Will add `src/dm/memory/memo_rag.py` and integrate into `MemoryManager.get_context()` and `MemoryManager.end_of_session()`.
+> **Status:** Implemented in `src/dm/memory/memo_rag.py`. Integrated into `MemoryManager.get_context()` (query augmentation) and `MemoryManager.end_of_session()` (clue generation). Tested in `tests/test_raptor_memorag.py`.
 
 ### What it is
 

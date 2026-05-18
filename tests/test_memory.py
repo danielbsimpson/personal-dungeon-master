@@ -180,7 +180,7 @@ class TestMemoryManagerGetContext:
 
         assert result == "## Remembered Context\n- Torben found a key"
         mock_graph.search.assert_called_once_with(
-            "What did Torben find?", "test_campaign"
+            "What did Torben find?", "test_campaign", num_results=10
         )
 
 

@@ -270,7 +270,29 @@ class DungeonMaster:
         await self._memory.record_turn(player_input, dm_response, self._turn)
         self._maybe_advance_progress(dm_response)
 
+        # Phase H: periodic RAPTOR rebuild
+        if (
+            self._settings.raptor_enabled
+            and self._turn > 0
+            and self._turn % self._settings.raptor_rebuild_every == 0
+        ):
+            try:
+                await self._memory.rebuild_raptor(self._make_llm_fn())
+            except Exception as exc:  # noqa: BLE001
+                log.warning("RAPTOR background rebuild failed: %s", exc)
+
         return dm_response
+
+    async def end_session(self) -> None:
+        """Generate session-end MemoRAG clues and rebuild the RAPTOR tree.
+
+        Call this when the player quits or between play sessions.  It is safe
+        to skip — the game continues normally without it.
+        """
+        try:
+            await self._memory.end_of_session(self._make_llm_fn())
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Session-end memory update failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -278,11 +300,12 @@ class DungeonMaster:
 
     def _make_llm_fn(self):
         """Return an async callable ``(prompt: str) -> str`` wrapping the
-        synchronous LLM provider.  Used for Phase F contextual compression."""
+        synchronous LLM provider.  Used for Phase F contextual compression
+        and Phase H/I RAPTOR/MemoRAG summarisation."""
         llm = self._llm
-        loop = asyncio.get_event_loop()
 
         async def _llm_fn(prompt: str) -> str:
+            loop = asyncio.get_running_loop()
             return await loop.run_in_executor(
                 None,
                 lambda: llm.complete([{"role": "user", "content": prompt}]),
