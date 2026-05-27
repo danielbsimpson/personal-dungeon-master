@@ -546,3 +546,135 @@ class TestPersonalityInSystemPrompt:
         messages = llm.complete.call_args[0][0]
         system_prompt = messages[0]["content"]
         assert "The Tactician" in system_prompt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestTwoPhaseRolls (ACTION plan)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestTwoPhaseRolls:
+    """Tests for the player-driven two-phase dice roll flow."""
+
+    def _make_dm(self, first_response: str, second_response: str = "") -> DungeonMaster:
+        """DM whose LLM returns *first_response* on call 1, *second_response* on call 2."""
+        llm = MagicMock()
+        call_count = 0
+
+        def _side_effect(messages, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            return first_response if call_count == 1 else second_response
+
+        llm.complete = MagicMock(side_effect=_side_effect)
+        llm.context_window = 4096
+        return DungeonMaster(llm, _make_campaign(), _make_rules(), _make_memory())
+
+    async def test_respond_no_rolls_unchanged(self):
+        """When no roll tags are present, respond() uses a single LLM call."""
+        dm = self._make_dm(first_response="You find a potion on the shelf.")
+        result = await dm.respond("I search the room.")
+
+        assert dm._llm.complete.call_count == 1
+        assert result == "You find a potion on the shelf."
+        dm._memory.record_turn.assert_called_once_with(
+            "I search the room.", "You find a potion on the shelf.", 1
+        )
+
+    async def test_respond_two_phase_with_rolls(self):
+        """respond() auto-rolls and calls the LLM twice when tags are present."""
+        dm = self._make_dm(
+            first_response="You swing your sword! [ROLL: attack 1d20+5]",
+            second_response="The blade strikes true!",
+        )
+        result = await dm.respond("I attack the goblin!")
+
+        assert dm._llm.complete.call_count == 2
+        assert result == "The blade strikes true!"
+
+        # Verify second-pass message structure.
+        second_call_msgs = dm._llm.complete.call_args_list[1][0][0]
+        assert second_call_msgs[0]["role"] == "system"
+        assert second_call_msgs[1]["role"] == "user"
+        assert second_call_msgs[1]["content"] == "I attack the goblin!"
+        assert second_call_msgs[2]["role"] == "assistant"
+        assert "[Awaiting roll: attack]" in second_call_msgs[2]["content"]
+        assert "[ROLL:" not in second_call_msgs[2]["content"]
+        assert second_call_msgs[3]["role"] == "user"
+        assert "Roll results:" in second_call_msgs[3]["content"]
+        assert "Please narrate the outcome." in second_call_msgs[3]["content"]
+
+    async def test_respond_two_phase_records_roll_footer(self):
+        """respond_with_rolls() stores a roll summary footer in the recorded response."""
+        from src.dice.die import RollResult, Die
+
+        dm = self._make_dm(
+            first_response="Persuade the guard. [ROLL: persuasion 1d20+3]",
+            second_response="The guard lets you through.",
+        )
+        # Use first_pass + respond_with_rolls directly to supply a known result.
+        _first, roll_requests = await dm.first_pass("I persuade the guard.")
+        manual_result = RollResult(die=Die.D20, rolls=[14], modifier=3, total=17, label="persuasion")
+        await dm.respond_with_rolls("I persuade the guard.", [manual_result])
+
+        call_args = dm._memory.record_turn.call_args[0]
+        recorded_response = call_args[1]
+        assert "[Rolls this turn: Persuasion 17]" in recorded_response
+
+    async def test_respond_two_phase_roll_result_in_second_pass_message(self):
+        """The roll result value appears in the second-pass user message."""
+        from src.dice.die import RollResult, Die
+
+        dm = self._make_dm(
+            first_response="Roll for stealth! [ROLL: stealth 1d20+2]",
+            second_response="You slip past undetected.",
+        )
+        _first, roll_requests = await dm.first_pass("I sneak past the guard.")
+        manual_result = RollResult(die=Die.D20, rolls=[16], modifier=2, total=18, label="stealth")
+        await dm.respond_with_rolls("I sneak past the guard.", [manual_result])
+
+        second_call_msgs = dm._llm.complete.call_args_list[1][0][0]
+        roll_user_msg = second_call_msgs[3]["content"]
+        assert "Stealth" in roll_user_msg
+        assert "18" in roll_user_msg
+
+    async def test_personality_directive_in_second_pass(self):
+        """The active personality's roll_outcome_directive appears in the second-pass system prompt."""
+        from src.dm.personality import get_personality
+
+        sage = get_personality("The Sage")
+        llm = MagicMock()
+        call_count = 0
+
+        def _side_effect(messages, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            return (
+                "Roll for it! [ROLL: attack 1d20+4]"
+                if call_count == 1
+                else "You land the blow."
+            )
+
+        llm.complete = MagicMock(side_effect=_side_effect)
+        llm.context_window = 4096
+        dm = DungeonMaster(
+            llm, _make_campaign(), _make_rules(), _make_memory(), personality=sage
+        )
+
+        await dm.respond("I attack.")
+
+        assert sage.roll_outcome_directive, "The Sage must have a roll_outcome_directive"
+        second_call_msgs = llm.complete.call_args_list[1][0][0]
+        system_prompt = second_call_msgs[0]["content"]
+        assert sage.roll_outcome_directive[:40] in system_prompt
+
+    async def test_finalize_no_roll_turn_records_turn(self):
+        """finalize_no_roll_turn() records the turn and clears pending state."""
+        dm = self._make_dm(first_response="Nothing happens.")
+        _first, _reqs = await dm.first_pass("I wait.")
+
+        assert dm._pending_player_input == "I wait."
+        await dm.finalize_no_roll_turn("I wait.", "Nothing happens.")
+        assert dm._pending_player_input is None
+        dm._memory.record_turn.assert_called_once_with("I wait.", "Nothing happens.", 1)
+

@@ -166,6 +166,44 @@ def substitute_rolls(text: str, results: list[RollResult]) -> str:
     return _TAG_RE.sub(_replacer, text)
 
 
+def placeholder_rolls(text: str, roll_requests: list[RollRequest]) -> str:
+    """
+    Replace each ``[ROLL: ...]`` tag in *text* with a neutral placeholder.
+
+    Used to sanitise a first-pass LLM response before feeding it back as the
+    assistant turn in a second-pass LLM call.  Prevents the model from seeing
+    a pre-resolved result in its own prior turn while still conveying what was
+    requested.
+
+    Parameters
+    ----------
+    text:
+        Raw LLM first-pass response containing ``[ROLL: ...]`` tags.
+    roll_requests:
+        Parsed roll requests in tag-appearance order (from
+        :func:`parse_roll_tags`).
+
+    Returns
+    -------
+    str
+        Text with each ``[ROLL: ...]`` tag replaced by
+        ``[Awaiting roll: <label>]``.
+    """
+    req_iter = iter(roll_requests)
+    known_faces = {d.value for d in Die}
+
+    def _replacer(m: re.Match) -> str:
+        faces = int(m.group("faces"))
+        if faces not in known_faces:
+            return m.group(0)
+        req = next(req_iter, None)
+        if req is None:
+            return m.group(0)
+        return f"[Awaiting roll: {req.label}]"
+
+    return _TAG_RE.sub(_replacer, text)
+
+
 def format_result(result: RollResult) -> str:
     """
     Produce a human-readable string for a single :class:`~src.dice.die.RollResult`.

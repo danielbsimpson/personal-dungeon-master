@@ -369,35 +369,35 @@ Give the player six distinct Dungeon Master personalities to choose from at star
 
 A browser-based interface served locally via FastAPI. Supports all session commands, streams DM output word-by-word via WebSocket, and displays the DM avatar and campaign scene images.
 
-- [ ] Add `fastapi`, `uvicorn[standard]`, `websockets` to `requirements.txt`
-- [ ] `src/interface/web.py`
-  - [ ] FastAPI app instance; serve static frontend at `GET /`
-  - [ ] `GET /campaigns` — return available campaigns as JSON
-  - [ ] `GET /personalities` — return all DM personalities as JSON
-  - [ ] `POST /session/start` — accept `{campaign, personality}`, initialise a `DungeonMaster` session, return a `session_id`
-  - [ ] `WS /session/{id}/chat` — WebSocket endpoint for the chat loop
-    - [ ] Accept `{type: "message", content: "..."}` — player turn
-    - [ ] Accept `{type: "interrupt"}` — cancel the current stream
-    - [ ] Send `{type: "token", content: "..."}` — one streamed token
-    - [ ] Send `{type: "roll", result: {...}}` — dice roll panel data
-    - [ ] Send `{type: "scene_image", url: "..."}` — campaign image to display
-    - [ ] Send `{type: "done"}` — stream complete
-  - [ ] `POST /session/{id}/command` — handle `/status`, `/journal`, `/graph`, `/roll`, `/reset`, `/fullreset`, `/save`; return structured JSON
-  - [ ] `GET /session/{id}/avatar` — return the avatar image for the current personality
-  - [ ] `GET /campaign/{name}/image/{filename}` — serve images from `images/<campaign_name>/`; validate the resolved path stays within the images directory to prevent directory traversal
-- [ ] `src/interface/static/`
-  - [ ] `index.html` — single-page layout: chat panel (centre), DM avatar (left sidebar), campaign image display (right sidebar), collapsible character status panel
-  - [ ] `style.css` — dark fantasy-themed styling with atmospheric colour palette
-  - [ ] `app.js` — WebSocket client; renders streaming tokens word by word; handles interrupt button; displays dice roll panels; loads and fades in avatar and campaign images
-- [ ] `src/main.py`
-  - [ ] Add `--interface` CLI flag (`cli` / `web`, default `cli`)
-  - [ ] When `--interface web`: start `uvicorn` on `localhost:8000` and open the browser automatically
-- [ ] Write integration tests
-  - [ ] Test `GET /campaigns` returns the expected list
-  - [ ] Test `GET /personalities` returns all six personalities
-  - [ ] Test `POST /session/start` returns a valid session ID with a mocked `DungeonMaster`
-  - [ ] Test WebSocket message/response cycle with a mocked `DungeonMaster`
-  - [ ] Test that `GET /campaign/{name}/image/{filename}` rejects path traversal attempts
+- [x] Add `fastapi`, `uvicorn[standard]`, `websockets`, `aiofiles` to `requirements.txt` and `pyproject.toml`
+- [x] `src/interface/web.py`
+  - [x] FastAPI app instance; serve static frontend at `GET /`
+  - [x] `GET /campaigns` — return available campaigns as JSON
+  - [x] `GET /personalities` — return all DM personalities as JSON
+  - [x] `POST /session/start` — accept `{campaign, personality}`, initialise a `DungeonMaster` session, return a `session_id`
+  - [x] `WS /session/{id}/chat` — WebSocket endpoint for the chat loop
+    - [x] Accept `{type: "message", content: "..."}` — player turn
+    - [x] Accept `{type: "interrupt"}` — cancel the current stream
+    - [x] Send `{type: "token", content: "..."}` — one streamed token
+    - [x] Send `{type: "roll", result: {...}}` — dice roll panel data
+    - [x] Send `{type: "scene_image", url: "..."}` — campaign image to display (hook ready; Phase 13 sends events)
+    - [x] Send `{type: "done"}` — stream complete
+  - [x] `POST /session/{id}/command` — handle `/status`, `/journal`, `/graph`, `/roll`, `/reset`, `/fullreset`, `/save`, `/personality`; return structured JSON
+  - [ ] `GET /session/{id}/avatar` — return the avatar image for the current personality (deferred to Phase 13; Three.js procedural avatar used instead)
+  - [ ] `GET /campaign/{name}/image/{filename}` — serve images from `images/<campaign_name>/`; validate the resolved path stays within the images directory to prevent directory traversal (Phase 13)
+- [x] `src/interface/static/`
+  - [x] `index.html` — single-page layout: chat panel (centre), DM avatar (left sidebar), campaign image display (right sidebar), collapsible character status panel
+  - [x] `style.css` — dark fantasy-themed styling with atmospheric colour palette
+  - [x] `app.js` — WebSocket client; renders streaming tokens word by word; handles interrupt button; displays dice roll panels; Three.js procedural DM avatar with per-personality colours
+- [x] `src/main.py`
+  - [x] Add `--interface` CLI flag (`cli` / `web`, default `cli`)
+  - [x] When `--interface web`: start `uvicorn` on `localhost:8000` and open the browser automatically
+- [x] Write integration tests (`tests/test_web.py` — 18 tests, all passing)
+  - [x] Test `GET /campaigns` returns the expected list
+  - [x] Test `GET /personalities` returns all six personalities
+  - [x] Test `POST /session/start` returns a valid session ID with a mocked `DungeonMaster`
+  - [x] Test WebSocket message/response cycle with a mocked `DungeonMaster`
+  - [x] Test that path traversal attempts are rejected (404/400/422)
 
 ---
 

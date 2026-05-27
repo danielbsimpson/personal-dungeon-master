@@ -36,7 +36,7 @@ from rich.table import Table
 from rich.text import Text
 
 from src.campaign.parser import Character, ParsedCampaign
-from src.dice.die import RollResult
+from src.dice.die import RollRequest, RollResult
 from src.dice.roller import format_result, parse_player_expression, roll
 from src.dm.dungeon_master import DungeonMaster
 from src.dm.memory.manager import MemoryManager
@@ -210,6 +210,140 @@ async def _stream_dm_response(dm: DungeonMaster, player_input: str) -> bool:
     # Cancel event may still be pending — set it so the watcher thread exits.
     cancel_event.set()
     return interrupted
+
+
+# ---------------------------------------------------------------------------
+# Two-phase roll prompting (ACTION plan)
+# ---------------------------------------------------------------------------
+
+
+def prompt_player_rolls(roll_requests: list[RollRequest]) -> list[RollResult]:
+    """
+    Prompt the player to execute each requested dice roll in turn.
+
+    For each :class:`~src.dice.die.RollRequest`:
+
+    - Blank input → auto-roll via :func:`~src.dice.roller.roll`.
+    - Integer input → use the provided total (physical dice support); an empty
+      ``rolls`` list is stored since individual die values are not known.
+    - Non-integer, non-blank input → re-prompt once, then auto-roll.
+
+    The result of each roll is rendered immediately via
+    :func:`print_roll_results`.
+
+    Parameters
+    ----------
+    roll_requests:
+        Roll requests in tag-appearance order, from :func:`~src.dice.roller.parse_roll_tags`.
+
+    Returns
+    -------
+    list[RollResult]
+        One result per request, in the same order.
+    """
+    results: list[RollResult] = []
+
+    for req in roll_requests:
+        die_str = f"{req.count}d{req.die.value}"
+        if req.modifier > 0:
+            die_str += f"+{req.modifier}"
+        elif req.modifier < 0:
+            die_str += str(req.modifier)
+
+        console.print()
+        console.print(
+            Panel(
+                f"[bold yellow]🎲  Roll for {req.label.title()} — {die_str}[/bold yellow]\n"
+                f"[dim]   Press Enter to roll digitally, or type your total:[/dim]",
+                border_style="yellow",
+                padding=(0, 2),
+                expand=False,
+            )
+        )
+
+        result: RollResult | None = None
+        for attempt in range(2):
+            raw = Prompt.ask("   [bold cyan]Your roll[/bold cyan]", default="").strip()
+            if raw == "":
+                result = roll(req)
+                break
+            try:
+                total = int(raw)
+                result = RollResult(
+                    die=req.die,
+                    rolls=[],
+                    modifier=req.modifier,
+                    total=total,
+                    label=req.label,
+                )
+                break
+            except ValueError:
+                if attempt == 0:
+                    console.print(
+                        "[red]Invalid input — please enter a number or "
+                        "press Enter to auto-roll.[/red]"
+                    )
+                else:
+                    console.print("[dim]Auto-rolling…[/dim]")
+                    result = roll(req)
+
+        print_roll_results([result])
+        results.append(result)
+
+    return results
+
+
+async def _stream_dm_response_two_phase(
+    dm: DungeonMaster, player_input: str
+) -> bool:
+    """
+    Two-phase DM response: first-pass LLM call, player roll prompts, then
+    outcome narration.
+
+    If the first-pass response contains no roll tags the turn falls through
+    to the same single-pass path as today.  Returns ``False`` (interruption
+    flag is not applicable for non-streamed responses).
+
+    Parameters
+    ----------
+    dm:
+        Active :class:`~src.dm.dungeon_master.DungeonMaster`.
+    player_input:
+        The player's raw input for this turn.
+
+    Returns
+    -------
+    bool
+        Always ``False`` (reserved for future streaming interrupt support).
+    """
+    with console.status("[green]The DM considers your action…[/green]", spinner="dots"):
+        first_response, roll_requests = await dm.first_pass(player_input)
+
+    if not roll_requests:
+        # No dice needed — commit the turn and display the response directly.
+        await dm.finalize_no_roll_turn(player_input, first_response)
+        print_dm_response(first_response)
+        return False
+
+    # Show pre-roll narration (everything before the first [ROLL: tag) so the
+    # player has context for why they're rolling.
+    first_roll_pos = first_response.find("[ROLL:")
+    if first_roll_pos > 0:
+        pre_roll_text = first_response[:first_roll_pos].rstrip()
+        if pre_roll_text:
+            print_dm_response(pre_roll_text)
+
+    # Prompt the player for each requested roll (auto-roll or physical dice).
+    roll_results = prompt_player_rolls(roll_requests)
+
+    # Second pass: narrate the outcome based on the roll values.
+    with console.status(
+        "[green]The DM narrates the outcome…[/green]", spinner="dots"
+    ):
+        final_response = await dm.respond_with_rolls(player_input, roll_results)
+
+    print_dm_response(final_response)
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -594,12 +728,15 @@ async def run_session(
                 continue
 
             # --- Normal player input --------------------------------------
-            await _stream_dm_response(dm, raw)
-            print_roll_results(dm.last_roll_results)
+            await _stream_dm_response_two_phase(dm, raw)
 
     except KeyboardInterrupt:
         console.print()
         console.print("[dim]Interrupted — saving session and exiting.[/dim]")
+
+    # Phase H/I: generate MemoRAG clues and rebuild RAPTOR tree at session end.
+    with console.status("[dim]Saving session memory…[/dim]", spinner="dots"):
+        await dm.end_session()
 
     console.print()
     console.print(Rule("[dim]Session ended.[/dim]", style="dim"))

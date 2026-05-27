@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Dungeon Master</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SETUP SCREEN
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div id="setup-screen" class="screen">
+    <div class="setup-container">
+      <h1 class="logo">⚔&nbsp; Personal Dungeon Master</h1>
+      <p class="logo-sub">A locally-run AI tabletop adventure</p>
+
+      <div class="form-group">
+        <label for="campaign-select">Campaign</label>
+        <select id="campaign-select">
+          <option value="">Loading campaigns…</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Dungeon Master Personality</label>
+        <div id="personality-grid"></div>
+      </div>
+
+      <button id="start-btn" class="btn-primary" disabled>
+        <span id="start-btn-text">Begin Adventure</span>
+        <span id="start-spinner" class="spinner hidden"></span>
+      </button>
+      <p id="setup-error" class="error-msg hidden"></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       GAME SCREEN
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div id="game-screen" class="screen hidden">
+
+    <!-- Left sidebar — DM avatar -->
+    <aside id="avatar-panel">
+      <canvas id="dm-canvas"></canvas>
+      <div id="personality-label"></div>
+      <button id="switch-personality-btn" class="btn-ghost" title="Switch DM personality">
+        ⚙ Switch DM
+      </button>
+    </aside>
+
+    <!-- Centre — chat -->
+    <main id="chat-panel">
+      <div id="chat-log"></div>
+
+      <div id="input-area">
+        <div id="quick-btns">
+          <button class="quick-btn" data-cmd="status"   title="Character status">⚔ Status</button>
+          <button class="quick-btn" data-cmd="journal"  title="Knowledge graph">📜 Journal</button>
+          <button class="quick-btn" data-cmd="roll"     title="Roll dice">🎲 Roll</button>
+          <button class="quick-btn" data-cmd="rules"    title="Rules lookup">📖 Rules</button>
+        </div>
+        <div id="input-row">
+          <input id="player-input" type="text" placeholder="What do you do?" autocomplete="off" />
+          <button id="send-btn">Send</button>
+          <button id="interrupt-btn" class="hidden" title="Stop the DM">✕ Stop</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right sidebar — scene image -->
+    <aside id="image-panel">
+      <div id="scene-image-wrap">
+        <img id="scene-image" src="" alt="Scene" />
+        <p id="image-caption"></p>
+      </div>
+      <div id="status-panel" class="hidden"></div>
+    </aside>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       PERSONALITY SWITCH MODAL
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div id="personality-modal" class="modal hidden">
+    <div class="modal-box">
+      <h2>Switch Dungeon Master</h2>
+      <div id="modal-personality-grid"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       ROLL / RULES MODAL
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div id="input-modal" class="modal hidden">
+    <div class="modal-box modal-box--sm">
+      <h2 id="input-modal-title"></h2>
+      <input id="input-modal-field" type="text" />
+      <div class="modal-actions">
+        <button id="input-modal-cancel" class="btn-ghost">Cancel</button>
+        <button id="input-modal-confirm" class="btn-primary">Go</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js + GSAP (CDN — loaded last so canvas is in DOM) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

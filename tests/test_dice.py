@@ -7,7 +7,7 @@ from random import Random
 import pytest
 
 from src.dice.die import Die, RollRequest, RollResult
-from src.dice.roller import format_result, parse_roll_tags, roll, substitute_rolls
+from src.dice.roller import format_result, parse_roll_tags, placeholder_rolls, roll, substitute_rolls
 
 
 # ---------------------------------------------------------------------------
@@ -277,3 +277,59 @@ def test_distribution_within_bounds(die: Die):
     if die.value <= 12:
         assert 1 in results, f"Never rolled 1 on {die}"
         assert die.value in results, f"Never rolled max ({die.value}) on {die}"
+
+
+# ---------------------------------------------------------------------------
+# placeholder_rolls
+# ---------------------------------------------------------------------------
+
+
+def test_parse_roll_tags_multiple():
+    """Multiple tags in one response are parsed in order with correct labels."""
+    text = (
+        "You lunge at the orc [ROLL: attack 1d20+4] and, if it connects, "
+        "deal [ROLL: damage 2d8+3] slashing damage."
+    )
+    tags = parse_roll_tags(text)
+    assert len(tags) == 2
+    assert tags[0].label == "attack"
+    assert tags[0].die == Die.D20
+    assert tags[0].modifier == 4
+    assert tags[1].label == "damage"
+    assert tags[1].die == Die.D8
+    assert tags[1].count == 2
+    assert tags[1].modifier == 3
+
+
+def test_placeholder_rolls_replaces_tags():
+    """placeholder_rolls() replaces each [ROLL: ...] tag with [Awaiting roll: <label>]."""
+    text = "Strike [ROLL: attack 1d20+5], dealing [ROLL: damage 2d6+2]."
+    tags = parse_roll_tags(text)
+    result = placeholder_rolls(text, tags)
+    assert "[ROLL:" not in result
+    assert "[Awaiting roll: attack]" in result
+    assert "[Awaiting roll: damage]" in result
+
+
+def test_placeholder_rolls_preserves_surrounding_text():
+    """Text outside roll tags is not changed."""
+    text = "You swing your blade! [ROLL: attack 1d20+5] The goblin watches."
+    tags = parse_roll_tags(text)
+    result = placeholder_rolls(text, tags)
+    assert result.startswith("You swing your blade! ")
+    assert result.endswith(" The goblin watches.")
+
+
+def test_placeholder_rolls_unknown_die_left_verbatim():
+    """Tags with unknown die faces are not replaced."""
+    text = "[ROLL: weird 1d7+0] stays verbatim."
+    tags = parse_roll_tags(text)  # returns [] because d7 is unknown
+    result = placeholder_rolls(text, tags)
+    assert result == text
+
+
+def test_placeholder_rolls_empty_requests():
+    """When roll_requests is empty, text is returned unchanged."""
+    text = "No dice here, just story."
+    result = placeholder_rolls(text, [])
+    assert result == text

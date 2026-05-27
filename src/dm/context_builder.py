@@ -110,8 +110,17 @@ or plot events that contradict the campaign book.
 has not yet encountered. Only reference content up to the current scene.
 - Apply the correct game rules for all mechanical actions (attack rolls, saving \
 throws, ability checks, conditions, spell effects). Use the rules reference provided.
-- When a dice roll is required, output a roll tag inline: \
-[ROLL: <label> <NdX+modifier>]. Examples: [ROLL: attack d20+5], [ROLL: damage 2d6].
+- When a player action warrants a dice check (attack, skill check, saving throw, \
+persuasion, deception, stealth, etc.), request the roll by emitting exactly one \
+[ROLL: <label> <NdX+modifier>] tag per check inline in your response. \
+Examples: [ROLL: attack 1d20+5]  [ROLL: persuasion 1d20+3]  [ROLL: damage 2d6+2]
+- After emitting a [ROLL: ...] tag, STOP narrating the outcome. Do not describe \
+whether the action succeeds or fails — that narration comes in your next response, \
+once the roll result is provided to you.
+- In your follow-up response (when given roll results), narrate what each number \
+means in the story. A high roll is a success; a low roll is a failure or complication. \
+React to the result in character — your personality determines how you describe \
+triumph and failure.
 - Keep responses immersive and appropriately paced. Match the campaign's tone.
 - Address the player in second person ("You see...", "You hear...").
 - When NPCs speak, use dialogue with quotation marks and in-character voice.
@@ -227,6 +236,8 @@ async def build_system_prompt(
     persona_section = _DM_PERSONA.strip()
     if personality is not None:
         persona_section = persona_section + "\n\n" + personality.system_prompt_directive
+        if personality.roll_outcome_directive:
+            persona_section = persona_section + "\n\n" + personality.roll_outcome_directive
 
     # 2. Relevant rules
     rules_text = get_relevant_rules(rules, state, current_text)

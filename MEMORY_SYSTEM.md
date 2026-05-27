@@ -809,7 +809,7 @@ def test_distant_chunks_are_not_merged():
 
 ---
 
-## 6. Phase E — Fusion retrieval for the campaign index ⬜ TODO
+## 6. Phase E — Fusion retrieval for the campaign index ✅ COMPLETE
 
 > **Status:** Implemented in `src/campaign/bm25_index.py` (BM25 index) and
 > `src/campaign/fusion.py` (RRF). `BM25CampaignIndex` is built inside
@@ -964,7 +964,7 @@ def test_rrf_combines_ranks():
 
 ---
 
-## 7. Phase F — Contextual compression ⬜ TODO
+## 7. Phase F — Contextual compression ✅ COMPLETE
 
 > **Status:** Implemented in `src/campaign/compressor.py`. `compress()` is an
 > async helper that calls the LLM to extract relevant sentences from each
@@ -1089,7 +1089,7 @@ def test_compression_falls_back_on_none():
 
 ---
 
-## 8. Phase G — Adaptive retrieval by NarrativeState ⬜ TODO
+## 8. Phase G — Adaptive retrieval by NarrativeState ✅ COMPLETE
 
 > **Status:** Implemented in `src/dm/retrieval_config.py`. `RetrievalConfig`
 > and `get_retrieval_config()` are imported in `context_builder.py` and used

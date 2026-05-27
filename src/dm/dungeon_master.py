@@ -26,7 +26,7 @@ from typing import Optional
 from src.campaign.parser import ParsedCampaign
 from src.config import Settings
 from src.config import settings as _default_settings
-from src.dice.roller import parse_roll_tags, roll, substitute_rolls
+from src.dice.roller import parse_roll_tags, placeholder_rolls, roll, substitute_rolls
 from src.dm.context_builder import build_system_prompt, detect_narrative_state
 from src.dm.memory.manager import MemoryManager
 from src.dm.personality import DEFAULT_PERSONALITY, DMPersonality
@@ -83,6 +83,11 @@ class DungeonMaster:
         self._turn: int = 0
         self._state: NarrativeState = NarrativeState.EXPLORATION
         self._last_roll_results: list = []
+        # Ephemeral context cached between first_pass() and respond_with_rolls().
+        self._pending_player_input: str | None = None
+        self._pending_first_response: str | None = None
+        self._pending_system_prompt: str | None = None
+        self._pending_session_msgs: list | None = None
 
     # ------------------------------------------------------------------
     # Token budget helpers
@@ -200,23 +205,10 @@ class DungeonMaster:
         """
         Generate a DM response to *player_input*.
 
-        Steps
-        -----
-        1. Infer narrative state from the player's input.
-        2. Build the system prompt (includes spoiler-guarded book + graph
-           memory context).
-        3. Assemble the full message list: system prompt + session window +
-           new player message.
-        4. Call the LLM.
-        5. Record the turn in memory (session window + Graphiti episode).
-        6. Check whether the response implies the player has reached a new
-           scene and advance the progress pointer accordingly.
-        7. Return the DM response.
-
-        Note
-        ----
-        Dice tag substitution (``[ROLL: ...]``) is added in Phase 7.  Until
-        then, roll tags produced by the LLM appear verbatim in the output.
+        Uses a two-phase flow when the LLM's first response contains
+        ``[ROLL: ...]`` tags: the dice are auto-rolled and the results are
+        fed back to the LLM for outcome narration.  When no roll tags are
+        present the first-pass response is committed directly (single call).
 
         Parameters
         ----------
@@ -227,6 +219,37 @@ class DungeonMaster:
         -------
         str
             The DM's narrated response.
+        """
+        first_response, roll_requests = await self.first_pass(player_input)
+
+        if roll_requests:
+            # Auto-roll all requested dice and narrate via the second pass.
+            auto_results = [roll(req) for req in roll_requests]
+            return await self.respond_with_rolls(player_input, auto_results)
+
+        # No rolls needed — commit the first pass directly.
+        await self.finalize_no_roll_turn(player_input, first_response)
+        return first_response
+
+    async def first_pass(self, player_input: str) -> tuple[str, list]:
+        """
+        Execute the first LLM call and detect any dice roll requests.
+
+        The system prompt and session context are cached internally for
+        use by the subsequent :meth:`respond_with_rolls` or
+        :meth:`finalize_no_roll_turn` call.
+
+        Parameters
+        ----------
+        player_input:
+            The player's raw input text for this turn.
+
+        Returns
+        -------
+        tuple[str, list[RollRequest]]
+            The LLM's first-pass response text and a (possibly empty) list
+            of :class:`~src.dice.die.RollRequest` objects for any roll tags
+            found in the response.
         """
         self._state = detect_narrative_state(player_input)
 
@@ -250,27 +273,107 @@ class DungeonMaster:
             + [{"role": "user", "content": player_input}]
         )
 
-        dm_response = self._llm.complete(
+        first_response = self._llm.complete(
             messages,
             temperature=self._settings.dm_temperature,
             max_tokens=self._settings.max_tokens,
         )
 
-        # --- Phase 7: resolve any [ROLL: ...] tags in the DM response -------
-        roll_requests = parse_roll_tags(dm_response)
-        if roll_requests:
-            roll_results = [roll(req) for req in roll_requests]
-            dm_response = substitute_rolls(dm_response, roll_results)
-            self._last_roll_results = roll_results
-        else:
-            self._last_roll_results = []
-        # ---------------------------------------------------------------------
+        # Cache context for the follow-up call.
+        self._pending_player_input = player_input
+        self._pending_first_response = first_response
+        self._pending_system_prompt = system_prompt
+        self._pending_session_msgs = session_msgs
 
+        return first_response, parse_roll_tags(first_response)
+
+    async def finalize_no_roll_turn(
+        self, player_input: str, first_response: str
+    ) -> None:
+        """
+        Commit a turn that contained no dice rolls.
+
+        Call this after :meth:`first_pass` when the returned ``roll_requests``
+        list is empty.  Records the turn in memory and runs post-turn hooks.
+
+        Parameters
+        ----------
+        player_input:
+            The original player input passed to :meth:`first_pass`.
+        first_response:
+            The LLM's first-pass response (returned by :meth:`first_pass`).
+        """
+        self._pending_player_input = None
+        self._pending_first_response = None
+        self._pending_system_prompt = None
+        self._pending_session_msgs = None
+
+        self._last_roll_results = []
         self._turn += 1
-        await self._memory.record_turn(player_input, dm_response, self._turn)
+        await self._memory.record_turn(player_input, first_response, self._turn)
+        self._maybe_advance_progress(first_response)
+
+        if (
+            self._settings.raptor_enabled
+            and self._turn > 0
+            and self._turn % self._settings.raptor_rebuild_every == 0
+        ):
+            try:
+                await self._memory.rebuild_raptor(self._make_llm_fn())
+            except Exception as exc:  # noqa: BLE001
+                log.warning("RAPTOR background rebuild failed: %s", exc)
+
+    async def respond_with_rolls(
+        self, player_input: str, roll_results: list
+    ) -> str:
+        """
+        Complete a two-phase turn by narrating the outcomes of the dice rolls.
+
+        Must be called after :meth:`first_pass` has been called for the same
+        *player_input*.  Uses the cached system prompt and session context so
+        the second LLM call sees identical context to the first.
+
+        Parameters
+        ----------
+        player_input:
+            The original player input — must match the preceding
+            :meth:`first_pass` call.
+        roll_results:
+            :class:`~src.dice.die.RollResult` objects, one per roll request
+            returned by :meth:`first_pass`.  These may be auto-rolled or
+            supplied by the player (physical dice).
+
+        Returns
+        -------
+        str
+            The DM's narration of the roll outcomes.
+        """
+        system_prompt = self._pending_system_prompt
+        session_msgs = self._pending_session_msgs or []
+        first_response = self._pending_first_response or ""
+
+        # Clear pending state.
+        self._pending_player_input = None
+        self._pending_first_response = None
+        self._pending_system_prompt = None
+        self._pending_session_msgs = None
+
+        dm_response = await self._second_pass(
+            player_input, roll_results, first_response, system_prompt, session_msgs
+        )
+
+        # Step 7: append a roll summary to the stored response so future
+        # turns can reference what was rolled and the outcomes.
+        roll_summary = ", ".join(
+            f"{r.label.title()} {r.total}" for r in roll_results
+        )
+        recorded_response = f"{dm_response}\n\n---\n[Rolls this turn: {roll_summary}]"
+
+        self._last_roll_results = list(roll_results)
+        self._turn += 1
+        await self._memory.record_turn(player_input, recorded_response, self._turn)
         self._maybe_advance_progress(dm_response)
 
-        # Phase H: periodic RAPTOR rebuild
         if (
             self._settings.raptor_enabled
             and self._turn > 0
@@ -282,6 +385,76 @@ class DungeonMaster:
                 log.warning("RAPTOR background rebuild failed: %s", exc)
 
         return dm_response
+
+    async def _second_pass(
+        self,
+        player_input: str,
+        roll_results: list,
+        first_response: str,
+        system_prompt: str | None,
+        session_msgs: list,
+    ) -> str:
+        """
+        Execute the second LLM call, narrating the outcome of the dice rolls.
+
+        The message list follows the structure from ACTION.md Step 5:
+        ``[system] → [user: original action] → [assistant: first pass with
+        placeholders] → [user: roll results + narration request]``.
+
+        Parameters
+        ----------
+        player_input:
+            The original player action text.
+        roll_results:
+            Roll outcomes to inject into the follow-up message.
+        first_response:
+            The LLM's first-pass response; ``[ROLL: ...]`` tags are replaced
+            with ``[Awaiting roll: <label>]`` placeholders before use.
+        system_prompt:
+            Full system prompt from the first pass (``None`` falls back to
+            an empty string, which should not happen in normal usage).
+        session_msgs:
+            Session window messages from the first pass.
+        """
+        roll_requests = parse_roll_tags(first_response)
+        placeholdered = placeholder_rolls(first_response, roll_requests)
+
+        # Build a clean roll-results message for the LLM.
+        lines: list[str] = []
+        for r in roll_results:
+            if not r.rolls:
+                lines.append(f"• {r.label.title()}: total {r.total}")
+            elif r.modifier > 0:
+                rolls_str = ", ".join(str(x) for x in r.rolls)
+                lines.append(
+                    f"• {r.label.title()}: rolled {rolls_str} + {r.modifier} = {r.total}"
+                )
+            elif r.modifier < 0:
+                rolls_str = ", ".join(str(x) for x in r.rolls)
+                lines.append(
+                    f"• {r.label.title()}: rolled {rolls_str} - {abs(r.modifier)} = {r.total}"
+                )
+            else:
+                rolls_str = ", ".join(str(x) for x in r.rolls)
+                lines.append(f"• {r.label.title()}: rolled {rolls_str} = {r.total}")
+
+        roll_message = (
+            "Roll results:\n" + "\n".join(lines) + "\n\nPlease narrate the outcome."
+        )
+
+        messages = (
+            [{"role": "system", "content": system_prompt or ""}]
+            + session_msgs
+            + [{"role": "user", "content": player_input}]
+            + [{"role": "assistant", "content": placeholdered}]
+            + [{"role": "user", "content": roll_message}]
+        )
+
+        return self._llm.complete(
+            messages,
+            temperature=self._settings.dm_temperature,
+            max_tokens=self._settings.max_tokens,
+        )
 
     async def end_session(self) -> None:
         """Generate session-end MemoRAG clues and rebuild the RAPTOR tree.

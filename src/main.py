@@ -16,6 +16,7 @@ Run with::
 
     python -m src.main
     python -m src.main --campaign example-campaign --model llama3.1:8b
+    python -m src.main --interface web          # browser UI on localhost:8000
     # or, after a ``pip install -e .`` that wires the console_scripts entry point:
     pdm
 """
@@ -25,6 +26,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -317,6 +319,36 @@ async def _run_session(
 
 
 # ---------------------------------------------------------------------------
+# Web launcher
+# ---------------------------------------------------------------------------
+
+
+def _run_web(host: str, port: int) -> None:
+    """Start the FastAPI web server and open a browser tab."""
+    try:
+        import uvicorn  # noqa: PLC0415
+    except ImportError:
+        console.print(
+            "[bold red]uvicorn is not installed.[/bold red]\n"
+            "Run: pip install 'uvicorn[standard]'"
+        )
+        sys.exit(1)
+
+    url = f"http://{host}:{port}"
+    console.print(f"[bold cyan]Starting web interface at[/bold cyan] [link={url}]{url}[/link]")
+    console.print("[dim]Press Ctrl+C to stop.[/dim]")
+
+    # Delay the browser open slightly so the server has time to bind.
+    import threading  # noqa: PLC0415
+    timer = threading.Timer(1.2, lambda: webbrowser.open(url))
+    timer.daemon = True
+    timer.start()
+
+    from src.interface.web import app as web_app  # noqa: PLC0415
+    uvicorn.run(web_app, host=host, port=port, log_level="warning")
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point (typer)
 # ---------------------------------------------------------------------------
 
@@ -355,9 +387,32 @@ def run(
         "--reset",
         help="Wipe the session window before starting (graph is preserved).",
     ),
+    interface: str = typer.Option(
+        "cli",
+        "--interface",
+        "-i",
+        help="UI mode: 'cli' (default) or 'web' (browser on localhost:8000).",
+        metavar="MODE",
+    ),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help="Host to bind the web server to (web mode only).",
+    ),
+    port: int = typer.Option(
+        8000,
+        "--port",
+        "-p",
+        help="Port for the web server (web mode only).",
+    ),
 ) -> None:
     """Personal Dungeon Master — locally-run AI tabletop RPG."""
     setup_logging()
+
+    if interface == "web":
+        _run_web(host, port)
+        return
+
     try:
         asyncio.run(_run_session(campaign, edition, provider, model, reset))
     except KeyboardInterrupt:
