@@ -109,6 +109,7 @@ async def _run_session(
     provider: Optional[str],
     model: Optional[str],
     reset: bool,
+    voice: bool = False,
 ) -> None:
     """Bootstrap and run a DM session with the given CLI overrides."""
     log = logging.getLogger(__name__)
@@ -315,7 +316,21 @@ async def _run_session(
         settings.dm_model,
         llm.context_window,
     )
-    await run_session(dm, memory, rules)
+    if voice:
+        from src.interface.voice import build_voice_engines, run_voice_session  # noqa: PLC0415
+
+        try:
+            with console.status(
+                "[cyan]Loading voice engines (first run downloads models)…[/cyan]",
+                spinner="dots",
+            ):
+                stt, tts = build_voice_engines(settings)
+        except RuntimeError as exc:
+            console.print(f"[bold red]Voice mode unavailable:[/bold red] {exc}")
+            sys.exit(1)
+        await run_voice_session(dm, memory, stt, tts, rules)
+    else:
+        await run_session(dm, memory, rules)
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +409,12 @@ def run(
         help="UI mode: 'cli' (default) or 'web' (browser on localhost:8000).",
         metavar="MODE",
     ),
+    voice: bool = typer.Option(
+        False,
+        "--voice",
+        help="Launch the CLI in voice mode (speak to the DM, hear spoken replies). "
+        "Requires: pip install -r requirements-voice.txt",
+    ),
     host: str = typer.Option(
         "127.0.0.1",
         "--host",
@@ -414,7 +435,7 @@ def run(
         return
 
     try:
-        asyncio.run(_run_session(campaign, edition, provider, model, reset))
+        asyncio.run(_run_session(campaign, edition, provider, model, reset, voice))
     except KeyboardInterrupt:
         pass
 

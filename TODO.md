@@ -434,17 +434,17 @@ Give the Dungeon Master a face. Each personality has a distinct avatar image. A 
 
 Add speech-to-text and text-to-speech so the player can speak to the DM and hear responses.
 
-- [ ] Research and select STT library (candidates: `faster-whisper` (preferred — runs locally on GPU, no API needed), `openai-whisper`, `SpeechRecognition` + Google)
-- [ ] Research and select TTS library (candidates: `edge-tts` (free, high quality, offline-friendly), `pyttsx3`, `openai` TTS API, `elevenlabs`)
-- [ ] `src/interface/voice.py`
-  - [ ] Implement push-to-talk mode (press a key to start recording, release to transcribe)
+- [x] Research and select STT library (candidates: `faster-whisper` (preferred — runs locally on GPU, no API needed), `openai-whisper`, `SpeechRecognition` + Google)
+- [x] Research and select TTS library — **Kokoro** (fast, local, high quality); STT via **faster-whisper**
+- [x] `src/interface/voice.py`
+  - [x] Implement push-to-talk mode (press Enter to start recording, press Enter again to transcribe)
   - [ ] Implement voice activity detection (VAD) mode as an alternative
-  - [ ] Transcribe audio to text and pass to the DM agent (reuse same `DungeonMaster.respond()` logic)
-  - [ ] Synthesize DM response text to audio and play it back
-  - [ ] Allow a configurable TTS voice persona (e.g., a deep, gravelly narrator voice)
-- [ ] Add `--voice` CLI flag to launch in voice mode (`python src/main.py --voice`)
-- [ ] Ensure voice and text modes are interchangeable — same session state, same memory
-- [ ] Add `voice` dependencies to a separate `requirements-voice.txt` to keep the base install lightweight
+  - [x] Transcribe audio to text and pass to the DM agent (reuse same `DungeonMaster.respond_stream()` logic)
+  - [x] Synthesize DM response text to audio and play it back — **streaming, sentence-by-sentence**: as the LLM streams tokens, each completed sentence is dispatched to Kokoro and played while the next sentence synthesises (no gaps); on-screen text is revealed in sync with the spoken audio
+  - [x] Allow a configurable TTS voice persona (`TTS_VOICE`, `TTS_LANG_CODE`, `TTS_SPEED` settings)
+- [x] Add `--voice` CLI flag to launch in voice mode (`python -m src.main --voice`)
+- [x] Ensure voice and text modes are interchangeable — same session state, same memory; player can type or speak each turn, all slash commands work
+- [x] Add `voice` dependencies to a separate `requirements-voice.txt` to keep the base install lightweight
 
 ---
 

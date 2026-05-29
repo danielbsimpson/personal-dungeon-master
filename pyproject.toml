@@ -29,6 +29,13 @@ dev = [
     "pytest>=9.0",
     "pytest-asyncio>=1.0",
 ]
+voice = [
+    "kokoro>=0.9.2",
+    "misaki[en]>=0.9.2",
+    "faster-whisper>=1.0.0",
+    "sounddevice>=0.4.6",
+    "soundfile>=0.12.1",
+]
 
 [project.scripts]
 dungeon-master = "src.main:run"

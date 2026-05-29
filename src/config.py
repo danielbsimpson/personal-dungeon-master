@@ -129,6 +129,28 @@ class Settings(BaseSettings):
     chunk_max_sentences: int = 40
     """Maximum number of sentences in a chunk before a forced split."""
 
+    # ── Voice interface (Phase 14) ────────────────────────────────────────────
+    tts_voice: str = "af_heart"
+    """Kokoro voice persona used for DM speech (e.g. 'af_heart', 'am_michael')."""
+
+    tts_lang_code: str = "a"
+    """Kokoro language code ('a' = American English, 'b' = British English)."""
+
+    tts_speed: float = 1.0
+    """Playback speed multiplier for synthesised DM speech."""
+
+    stt_model: str = "base"
+    """faster-whisper model size for speech-to-text (e.g. 'tiny', 'base', 'small')."""
+
+    stt_device: str = "cpu"
+    """Device for the STT model ('cpu' or 'cuda')."""
+
+    stt_compute_type: str = "int8"
+    """faster-whisper compute type (e.g. 'int8', 'float16')."""
+
+    voice_sample_rate: int = 16000
+    """Microphone capture sample rate (Hz) for speech-to-text."""
+
     # ── Derived paths (set by validators) ─────────────────────────────────────
     # Not read from env; computed from rules_dir + game_edition.
     rules_edition_dir: Path = _PROJECT_ROOT / "rules" / "5e"
