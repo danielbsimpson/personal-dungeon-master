@@ -8,17 +8,19 @@ Runs **entirely locally** — no API keys, no cloud calls, no data leaving your 
 
 ## Build Status
 
+[![CI](https://github.com/danielbsimpson/personal-dungeon-master/actions/workflows/ci.yml/badge.svg)](https://github.com/danielbsimpson/personal-dungeon-master/actions/workflows/ci.yml)
+
 | Phase | Description | Status |
 |---|---|---|
 | 1 | Project scaffolding, rules files, example campaign | ✅ Complete |
-| 2 | llama.cpp LLM provider, model picker | ✅ Complete (10 tests) |
+| 2 | llama.cpp LLM provider, model picker, retry/backoff | ✅ Complete (14 tests) |
 | 3 | Campaign loading, parsing, and selection | ✅ Complete (52 tests) |
 | 4 | Rules system — loader, reference, NarrativeState | ✅ Complete (25 tests) |
 | 5 | Memory graph — Graphiti + Kuzu | ✅ Complete (8 tests) |
 | 5a | RAG pipeline (A–I) — semantic chunking, contextual headers, hierarchical index, relevant segment extraction, BM25 + RRF fusion, contextual compression, adaptive retrieval, RAPTOR, MemoRAG | ✅ Complete (77 tests) |
 | 6 | DM agent — context builder, spoiler guard, two-phase dice resolution | ✅ Complete (56 tests) |
 | 7 | Dice engine — `Die` enum, `RollRequest`/`RollResult`, `roll()`, tag parsing, substitution | ✅ Complete (42 tests) |
-| 8 | CLI text interface (`src/interface/cli.py`) and main entry point (`src/main.py`) | ✅ Complete |
+| 8 | CLI text interface (`src/interface/cli.py`) and main entry point (`src/main.py`) | ✅ Complete (1 e2e test) |
 | 9 | Polish & reliability — CLI flags, token counting, context window budget, logging | ✅ Complete |
 | 10 | Streaming word-by-word output and player interrupt | ✅ Complete |
 | 11 | DM personality system — six named personalities | ✅ Complete |
@@ -29,7 +31,7 @@ Runs **entirely locally** — no API keys, no cloud calls, no data leaving your 
 | 16 | Campaign authoring tooling | 🔲 Not started |
 | 17 | External LLM provider support (OpenAI, Anthropic, Gemini, etc.) | 🔲 Not started |
 
-**302 tests passing** across the LLM provider, campaign pipeline, full RAG stack (chunking, fusion, compression, RAPTOR, MemoRAG), memory, dice, DM agent, personalities, and the web and voice interfaces. The CLI entry point (Phase 8) is additionally covered by manual end-to-end testing.
+**307 tests passing** across the LLM provider (including retry/backoff), campaign pipeline, full RAG stack (chunking, fusion, compression, RAPTOR, MemoRAG), memory, dice, DM agent, personalities, the web and voice interfaces, and a scripted CLI end-to-end smoke test. Continuous integration runs `ruff` (lint) and `pytest` on every push and pull request via [GitHub Actions](.github/workflows/ci.yml) against Python 3.11 and 3.12.
 
 ---
 
@@ -496,6 +498,23 @@ The text interface and voice interface will share the same underlying DM agent, 
 ## Contributing
 
 This is a personal project, but contributions and ideas are welcome. Please open an issue before submitting a pull request.
+
+### Development setup
+
+Install the project with its development extras (adds `pytest`, `pytest-asyncio`, and `ruff`):
+
+```bash
+pip install -e ".[dev]"
+```
+
+Run the linter and the test suite locally before pushing:
+
+```bash
+python -m ruff check .
+python -m pytest -q
+```
+
+Both commands run automatically in [CI](.github/workflows/ci.yml) on every push and pull request, against Python 3.11 and 3.12. Lint and tooling configuration (ruff, isort, pytest) lives in [pyproject.toml](pyproject.toml).
 
 ---
 

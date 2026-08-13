@@ -9,7 +9,7 @@ A phased development plan for building the Personal Dungeon Master system. Tasks
 > **The authoritative, up-to-date roadmap is the Build Status table in [README.md](README.md).** The
 > checklists below are retained as a historical implementation record.
 
-- **302 tests passing.**
+- **307 tests passing.**
 - **Phases 1–14 are implemented**, including the web interface (Phase 12), the RAG pipeline
   (Phases A–I: semantic chunking, contextual headers, hierarchical index, segment extraction,
   BM25 + RRF fusion, contextual compression, adaptive retrieval, RAPTOR, MemoRAG), the DM
