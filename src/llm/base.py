@@ -1,9 +1,9 @@
 """
 Abstract base for all LLM providers.
 
-New providers (e.g. OpenAI in Phase 13) must subclass LLMProvider and
-implement complete().  Streaming is optional — providers that do not
-implement stream() receive a default implementation that delegates to
+New providers (e.g. external cloud providers in a later phase) must subclass
+LLMProvider and implement complete().  Streaming is optional — providers that
+do not implement stream() receive a default implementation that delegates to
 complete() and yields the full reply as a single chunk.
 """
 

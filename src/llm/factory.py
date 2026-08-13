@@ -2,7 +2,8 @@
 LLM provider factory.
 
 Reads LLM_PROVIDER from settings and constructs the appropriate LLMProvider
-implementation.  Only llama.cpp is supported until Phase 13 adds OpenAI.
+implementation.  Only llama.cpp is supported; external cloud providers are
+deferred to a later phase.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ def create_provider(settings: "Settings") -> LLMProvider:
         raise NotImplementedError(
             f"LLM provider '{settings.llm_provider}' is not yet supported.\n"
             "Only 'llamacpp' is available at this stage.\n"
-            "OpenAI support will be added in Phase 13.\n"
+            "External cloud providers are planned for a later phase.\n"
             "Set LLM_PROVIDER=llamacpp in your .env file."
         )
 

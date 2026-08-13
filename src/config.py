@@ -35,10 +35,8 @@ class Settings(BaseSettings):
 
     # ── LLM provider ─────────────────────────────────────────────────────────
     llm_provider: str = "llamacpp"
-    """Which LLM backend to use: 'llamacpp' (default) or 'openai' (Phase 13)."""
-
-    openai_api_key: str = ""
-    """Required when llm_provider='openai'."""
+    """Which LLM backend to use. Only 'llamacpp' is supported; external cloud
+    providers are deferred to a later phase (see the final phase in TODO.md)."""
 
     llamacpp_base_url: str = "http://localhost:8080"
     """Base URL for the llama.cpp server. Required when llm_provider='llamacpp'."""
@@ -168,9 +166,10 @@ class Settings(BaseSettings):
     @classmethod
     def _validate_provider(cls, v: str) -> str:
         v = v.lower().strip()
-        if v not in {"openai", "llamacpp"}:
+        if v != "llamacpp":
             raise ValueError(
-                f"LLM_PROVIDER must be 'openai' or 'llamacpp', got '{v}'."
+                f"LLM_PROVIDER must be 'llamacpp', got '{v}'. External cloud "
+                "providers are not yet supported — they are planned for a later phase."
             )
         return v
 
@@ -184,12 +183,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_provider_fields(self) -> "Settings":
-        """Raise an informative error if provider-specific required fields are missing."""
-        if self.llm_provider == "openai" and not self.openai_api_key:
-            raise ValueError(
-                "OPENAI_API_KEY must be set when LLM_PROVIDER=openai. "
-                "Set it in your .env file or as an environment variable."
-            )
+        """Derive computed paths after the base fields are validated."""
         # Derive the edition-specific rules directory.
         self.rules_edition_dir = (self.rules_dir / self.game_edition).resolve()
         return self
