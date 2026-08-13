@@ -61,5 +61,8 @@ target-version = "py311"
 select = ["E", "F", "W", "I"]
 ignore = ["E501"]  # line length is not enforced
 
+[tool.ruff.lint.isort]
+known-first-party = ["src"]  # keep src.* grouping stable whether or not it is pip-installed
+
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # re-exports
