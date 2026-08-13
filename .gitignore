@@ -17,7 +17,7 @@ venv/
 env/
 
 # Memory (runtime session and journal data — not committed)
-memory/
+/memory/
 
 # Logs
 logs/
