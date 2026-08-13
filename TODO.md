@@ -29,7 +29,10 @@ A phased development plan for building the Personal Dungeon Master system. Tasks
       config lives in `pyproject.toml`.
 - [ ] Server-side campaign image serving + `scene_image` events, and per-personality avatar
       portraits (Phase 13 — the procedural Three.js avatar is already in place).
-- [ ] Phases 15–17: multi-character/party support, campaign authoring tooling, external cloud LLM providers.
+- [ ] Phase 15: multi-character/party support.
+- [ ] Phase 17: external cloud LLM providers (deferred as far back as possible — local-first is the priority through v1).
+- ⏸️ Phase 16 (campaign authoring tooling) is on hold — split into the dedicated
+      [campaign-creation-tool](https://github.com/danielbsimpson/campaign-creation-tool) repository.
 
 ---
 
@@ -490,6 +493,11 @@ Extend the system to support a full party of adventurers.
 ---
 
 ## Phase 16 — Campaign Authoring Tooling
+
+> **⏸️ On hold.** Campaign design/authoring has been split out into a dedicated
+> project: [campaign-creation-tool](https://github.com/danielbsimpson/campaign-creation-tool).
+> The tasks below are retained as a reference for the campaign file format this
+> project consumes; the tooling itself will live in that separate repository.
 
 Make it easy to create new campaigns in the required format.
 

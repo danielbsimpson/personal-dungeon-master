@@ -28,7 +28,7 @@ Runs **entirely locally** — no API keys, no cloud calls, no data leaving your 
 | 13 | DM avatar and campaign image display window | 🚧 Partial — procedural Three.js avatar renders in the web UI; server-side campaign image serving is not yet wired |
 | 14 | Voice interface — speech-to-text and text-to-speech | ✅ Complete (14 tests) |
 | 15 | Multi-character & party support | 🔲 Not started |
-| 16 | Campaign authoring tooling | 🔲 Not started |
+| 16 | Campaign authoring tooling | ⏸️ On hold — moved to [campaign-creation-tool](https://github.com/danielbsimpson/campaign-creation-tool) |
 | 17 | External LLM provider support (OpenAI, Anthropic, Gemini, etc.) | 🔲 Not started |
 
 **307 tests passing** across the LLM provider (including retry/backoff), campaign pipeline, full RAG stack (chunking, fusion, compression, RAPTOR, MemoRAG), memory, dice, DM agent, personalities, the web and voice interfaces, and a scripted CLI end-to-end smoke test. Continuous integration runs `ruff` (lint) and `pytest` on every push and pull request via [GitHub Actions](.github/workflows/ci.yml) against Python 3.11 and 3.12.
