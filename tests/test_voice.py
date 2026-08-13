@@ -7,15 +7,12 @@ playback monkeypatched out so no real sound device is required).
 
 from __future__ import annotations
 
-import pytest
-
 from src.interface.voice import (
     SentenceAccumulator,
     SentenceStreamer,
     clean_for_speech,
     extract_sentences,
 )
-
 
 # ---------------------------------------------------------------------------
 # extract_sentences

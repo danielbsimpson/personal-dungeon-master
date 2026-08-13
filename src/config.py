@@ -10,7 +10,6 @@ Usage:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -64,6 +63,12 @@ class Settings(BaseSettings):
     # ── LLM behaviour ─────────────────────────────────────────────────────────
     dm_temperature: float = 0.8
     max_tokens: int = 1024
+
+    llm_max_retries: int = 3
+    """Maximum number of attempts for a single LLM request on transient errors."""
+
+    llm_backoff_base: float = 0.5
+    """Base seconds for exponential backoff between LLM retries (delay = base * 2**attempt)."""
 
     # ── Memory / Graphiti ─────────────────────────────────────────────────────
     session_window: int = 20

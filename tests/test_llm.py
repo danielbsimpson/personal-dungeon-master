@@ -7,10 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+from openai import APIConnectionError
 
 from src.llm.factory import create_provider
 from src.llm.llamacpp_provider import LlamaCppProvider
-
 
 # ---------------------------------------------------------------------------
 # Minimal settings stand-in for tests — avoids loading .env or triggering
@@ -24,6 +24,8 @@ class _MockSettings:
     dm_model: str = "llama3"
     dm_temperature: float = 0.8
     max_tokens: int = 1024
+    llm_max_retries: int = 3
+    llm_backoff_base: float = 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +190,80 @@ class TestLlamaCppProviderStream:
 
         with pytest.raises(RuntimeError, match="No model configured"):
             list(provider.stream([]))
+
+
+def _conn_error() -> APIConnectionError:
+    """Build a retryable openai connection error."""
+    return APIConnectionError(request=httpx.Request("POST", "http://localhost:8080/v1"))
+
+
+def _ok_response(text: str = "ok") -> MagicMock:
+    resp = MagicMock()
+    resp.choices[0].message.content = text
+    return resp
+
+
+class TestLlamaCppProviderRetry:
+    def test_complete_retries_then_succeeds(self) -> None:
+        """complete() retries transient errors and returns the eventual reply."""
+        provider = _make_provider()
+        provider._model = "llama3"
+        provider._client.chat.completions.create.side_effect = [
+            _conn_error(),
+            _conn_error(),
+            _ok_response("recovered"),
+        ]
+
+        with patch("src.llm.llamacpp_provider.time.sleep") as mock_sleep:
+            reply = provider.complete([{"role": "user", "content": "hi"}])
+
+        assert reply == "recovered"
+        assert provider._client.chat.completions.create.call_count == 3
+        # Two backoff sleeps for base 0.5: 0.5 * 2**0, 0.5 * 2**1.
+        assert [c.args[0] for c in mock_sleep.call_args_list] == [0.5, 1.0]
+
+    def test_complete_exhausts_retries_and_raises(self) -> None:
+        """complete() re-raises the transient error after exhausting attempts."""
+        settings = _MockSettings(llm_max_retries=2)
+        provider = _make_provider(settings)
+        provider._model = "llama3"
+        provider._client.chat.completions.create.side_effect = _conn_error()
+
+        with patch("src.llm.llamacpp_provider.time.sleep"):
+            with pytest.raises(APIConnectionError):
+                provider.complete([{"role": "user", "content": "hi"}])
+
+        assert provider._client.chat.completions.create.call_count == 2
+
+    def test_complete_does_not_retry_non_transient_error(self) -> None:
+        """A non-retryable error is raised immediately without retrying."""
+        provider = _make_provider()
+        provider._model = "llama3"
+        provider._client.chat.completions.create.side_effect = ValueError("bad request")
+
+        with patch("src.llm.llamacpp_provider.time.sleep") as mock_sleep:
+            with pytest.raises(ValueError):
+                provider.complete([{"role": "user", "content": "hi"}])
+
+        assert provider._client.chat.completions.create.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_stream_retries_establishing_the_stream(self) -> None:
+        """stream() retries transient errors while opening the stream."""
+        provider = _make_provider()
+        provider._model = "llama3"
+        chunk = MagicMock()
+        chunk.choices[0].delta.content = "hello"
+        provider._client.chat.completions.create.side_effect = [
+            _conn_error(),
+            iter([chunk]),
+        ]
+
+        with patch("src.llm.llamacpp_provider.time.sleep"):
+            result = list(provider.stream([{"role": "user", "content": "hi"}]))
+
+        assert result == ["hello"]
+        assert provider._client.chat.completions.create.call_count == 2
 
 
 class TestLLMProviderStreamDefault:

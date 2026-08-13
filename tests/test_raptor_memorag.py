@@ -18,11 +18,9 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
-import pytest
 
-from src.dm.memory.memo_rag import MemoryClue, MemoRAGStore
+from src.dm.memory.memo_rag import MemoRAGStore, MemoryClue
 from src.dm.memory.raptor import RaptorNode, RaptorTree
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared helpers

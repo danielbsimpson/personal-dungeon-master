@@ -69,7 +69,7 @@ async def main() -> None:
     from src.campaign.loader import load_campaigns
     from src.campaign.parser import parse_campaign
     from src.config import settings
-    from src.dm.context_builder import build_system_prompt, detect_narrative_state
+    from src.dm.context_builder import detect_narrative_state
     from src.dm.dungeon_master import DungeonMaster
     from src.dm.memory.manager import MemoryManager
     from src.llm.factory import create_provider
@@ -79,12 +79,12 @@ async def main() -> None:
     if args.model:
         settings.dm_model = args.model
 
-    # Guard: this script only supports Ollama
-    if settings.llm_provider != "ollama":
+    # Guard: this script only supports the local llama.cpp provider
+    if settings.llm_provider != "llamacpp":
         print(
             f"\nERROR: LLM_PROVIDER is set to '{settings.llm_provider}' in your .env.\n"
-            "This smoke test requires Ollama (local inference only).\n"
-            "Set LLM_PROVIDER=ollama in your .env file and re-run."
+            "This smoke test requires the local llama.cpp provider (local inference only).\n"
+            "Set LLM_PROVIDER=llamacpp in your .env file and re-run."
         )
         sys.exit(1)
 

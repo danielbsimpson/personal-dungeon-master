@@ -19,13 +19,11 @@ Special commands
 
 from __future__ import annotations
 
-import asyncio
 import sys
 import threading
 from typing import Optional
 
 from rich import box
-from rich.columns import Columns
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -37,7 +35,7 @@ from rich.text import Text
 
 from src.campaign.parser import Character, ParsedCampaign
 from src.dice.die import RollRequest, RollResult
-from src.dice.roller import format_result, parse_player_expression, roll
+from src.dice.roller import parse_player_expression, roll
 from src.dm.dungeon_master import DungeonMaster
 from src.dm.memory.manager import MemoryManager
 from src.dm.personality import PERSONALITIES, get_personality
@@ -87,7 +85,7 @@ def print_campaign_header(campaign: ParsedCampaign) -> None:
     console.print()
     panel = Panel(
         Markdown(campaign.summary),
-        title=f"[bold gold1]Campaign[/bold gold1]",
+        title="[bold gold1]Campaign[/bold gold1]",
         border_style="gold1",
         padding=(1, 2),
     )

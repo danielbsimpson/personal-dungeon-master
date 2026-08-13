@@ -14,6 +14,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.config import Settings
 
 
 @dataclass
@@ -35,7 +39,7 @@ class RulesReference:
         return sorted(self.sections)
 
 
-def load_rules(settings: "Settings | None" = None) -> RulesReference:  # type: ignore[name-defined]
+def load_rules(settings: "Settings | None" = None) -> RulesReference:
     """
     Load all ``.md`` files from ``RULES_DIR/<edition>/`` into a
     :class:`RulesReference`.

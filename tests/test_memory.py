@@ -15,10 +15,7 @@ import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from src.dm.memory.session_store import SessionStore
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SessionStore

@@ -14,7 +14,6 @@ from src.dm.spoiler_guard import revealed_text
 from src.rules.loader import RulesReference
 from src.rules.reference import NarrativeState
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared test fixtures
 # ─────────────────────────────────────────────────────────────────────────────
@@ -606,7 +605,7 @@ class TestTwoPhaseRolls:
 
     async def test_respond_two_phase_records_roll_footer(self):
         """respond_with_rolls() stores a roll summary footer in the recorded response."""
-        from src.dice.die import RollResult, Die
+        from src.dice.die import Die, RollResult
 
         dm = self._make_dm(
             first_response="Persuade the guard. [ROLL: persuasion 1d20+3]",
@@ -623,7 +622,7 @@ class TestTwoPhaseRolls:
 
     async def test_respond_two_phase_roll_result_in_second_pass_message(self):
         """The roll result value appears in the second-pass user message."""
-        from src.dice.die import RollResult, Die
+        from src.dice.die import Die, RollResult
 
         dm = self._make_dm(
             first_response="Roll for stealth! [ROLL: stealth 1d20+2]",

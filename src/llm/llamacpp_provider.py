@@ -13,10 +13,17 @@ Start the server with:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Iterator
+import time
+from typing import TYPE_CHECKING, Callable, Iterator, TypeVar
 
 import httpx
-from openai import OpenAI
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    InternalServerError,
+    OpenAI,
+    RateLimitError,
+)
 
 from src.llm.base import LLMProvider, ModelInfo
 
@@ -27,6 +34,17 @@ log = logging.getLogger(__name__)
 
 _DEFAULT_CONTEXT_WINDOW = 4_096
 
+# Errors worth retrying: transient connectivity, timeouts, rate limits, and
+# 5xx server responses.  Client errors (4xx other than 429) are not retried.
+_RETRYABLE_ERRORS = (
+    APIConnectionError,
+    APITimeoutError,
+    RateLimitError,
+    InternalServerError,
+)
+
+_T = TypeVar("_T")
+
 
 class LlamaCppProvider(LLMProvider):
     """LLM provider backed by a locally running llama.cpp server."""
@@ -35,6 +53,8 @@ class LlamaCppProvider(LLMProvider):
         self._base_url: str = settings.llamacpp_base_url.rstrip("/")
         self._temperature: float = settings.dm_temperature
         self._max_tokens: int = settings.max_tokens
+        self._max_retries: int = max(1, int(settings.llm_max_retries))
+        self._backoff_base: float = float(settings.llm_backoff_base)
         self._model: str = ""
         self.context_window: int = _DEFAULT_CONTEXT_WINDOW
 
@@ -135,6 +155,41 @@ class LlamaCppProvider(LLMProvider):
 
     # ── Inference ─────────────────────────────────────────────────────────────
 
+    def _with_retries(self, operation: Callable[[], _T], what: str) -> _T:
+        """
+        Run *operation*, retrying transient errors with exponential backoff.
+
+        Retries on connection errors, timeouts, rate limits, and 5xx
+        responses up to ``llm_max_retries`` attempts.  The final failure is
+        re-raised so callers still see a clear error.
+        """
+        last_exc: Exception | None = None
+        for attempt in range(self._max_retries):
+            try:
+                return operation()
+            except _RETRYABLE_ERRORS as exc:
+                last_exc = exc
+                if attempt == self._max_retries - 1:
+                    break
+                delay = self._backoff_base * (2 ** attempt)
+                log.warning(
+                    "LlamaCppProvider.%s failed (attempt %d/%d): %s. Retrying in %.1fs.",
+                    what,
+                    attempt + 1,
+                    self._max_retries,
+                    exc,
+                    delay,
+                )
+                time.sleep(delay)
+        assert last_exc is not None
+        log.error(
+            "LlamaCppProvider.%s exhausted %d attempts: %s",
+            what,
+            self._max_retries,
+            last_exc,
+        )
+        raise last_exc
+
     def complete(self, messages: list[dict], **kwargs) -> str:
         """Send chat messages to the llama.cpp server and return the reply text."""
         if not self._model:
@@ -151,11 +206,14 @@ class LlamaCppProvider(LLMProvider):
             temperature,
             max_tokens,
         )
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=temperature,
-            max_tokens=max_tokens,
+        response = self._with_retries(
+            lambda: self._client.chat.completions.create(
+                model=self._model,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=temperature,
+                max_tokens=max_tokens,
+            ),
+            what="complete",
         )
         reply = response.choices[0].message.content or ""
         log.debug(
@@ -179,12 +237,17 @@ class LlamaCppProvider(LLMProvider):
             temperature,
             max_tokens,
         )
-        stream = self._client.chat.completions.create(
-            model=self._model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stream=True,
+        # Retry only covers establishing the stream; once tokens start
+        # arriving a mid-stream failure is surfaced to the caller.
+        stream = self._with_retries(
+            lambda: self._client.chat.completions.create(
+                model=self._model,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+            ),
+            what="stream",
         )
         for chunk in stream:
             content = chunk.choices[0].delta.content

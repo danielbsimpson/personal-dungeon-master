@@ -9,6 +9,11 @@ The guide is ordered by implementation priority. Each section covers what to
 build, where it fits in the existing codebase, the code changes required, and
 how to verify correctness.
 
+> **Status: all phases (A–I) below are implemented and covered by tests.** This document is
+> retained as the design reference for the RAG stack. The local backend is now **llama.cpp**
+> (`LLM_PROVIDER=llamacpp`, any OpenAI-compatible `/v1` server); references to "Ollama" below are
+> historical and describe the same OpenAI-compatible embedder/LLM approach.
+
 ---
 
 ## Table of Contents
@@ -58,7 +63,7 @@ turn. Understanding this distinction drives all architectural decisions.
 │              └───────────────────────────────────────┘           │
 └─────────────────────────────────────────────────────────────────┘
                                │
-                      Ollama LLM (local)
+                   llama.cpp LLM (local, OpenAI-compatible)
 ```
 
 ### Files touched by this guide

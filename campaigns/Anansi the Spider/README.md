@@ -4,9 +4,9 @@ A D&D 5e one-shot designed for a single player of level 5–7, set in a West Afr
 
 > For full scene descriptions, encounter details, and DM notes, see [Anansi the Spider.txt](Anansi%20the%20Spider.txt).
 
-> For all named characters and NPC guidance, see [characters.md](characters.md).
+> For all named characters and NPC guidance, see [character.md](character.md).
 
-> For all creature stat blocks and encounter notes, see [creatures.md](creatures.md).
+> For all creature stat blocks and encounter notes, see [creature.md](creature.md).
 
 ---
 

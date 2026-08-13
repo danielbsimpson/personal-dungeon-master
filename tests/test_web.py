@@ -8,13 +8,10 @@ LLM calls, memory) is mocked so tests stay fast.
 
 from __future__ import annotations
 
-from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient, ASGITransport
-
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
@@ -96,8 +93,9 @@ def client():
 # ---------------------------------------------------------------------------
 
 def test_get_campaigns_returns_list(client):
-    from src.campaign.loader import Campaign
     from pathlib import Path
+
+    from src.campaign.loader import Campaign
 
     mock_campaigns = [
         Campaign(
@@ -154,8 +152,9 @@ def test_personalities_have_required_fields(client):
 # ---------------------------------------------------------------------------
 
 def test_start_session_returns_session_id(client):
-    from src.campaign.loader import Campaign
     from pathlib import Path
+
+    from src.campaign.loader import Campaign
 
     mock_campaign_meta = Campaign(
         name="example-campaign",
@@ -194,8 +193,9 @@ def test_start_session_returns_session_id(client):
 
 
 def test_start_session_unknown_campaign_returns_404(client):
-    from src.campaign.loader import Campaign
     from pathlib import Path
+
+    from src.campaign.loader import Campaign
 
     mock_campaign_meta = Campaign(
         name="other-campaign",
@@ -220,7 +220,7 @@ def test_start_session_unknown_campaign_returns_404(client):
 @pytest.fixture
 def session_client():
     """Client with a pre-populated session in _sessions."""
-    from src.interface.web import app, _sessions
+    from src.interface.web import _sessions, app
 
     session, sid = _make_mock_session()
     _sessions[sid] = session
@@ -322,7 +322,7 @@ def test_websocket_sends_opening_narration():
     The WebSocket should send an 'opening' message on first connect
     after start_campaign() completes.
     """
-    from src.interface.web import app, _sessions
+    from src.interface.web import _sessions, app
 
     session, sid = _make_mock_session()
     session.dm.last_roll_results = []

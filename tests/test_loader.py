@@ -1,10 +1,10 @@
 """Tests for the campaign loader (Phase 3)."""
 
-import pytest
 from pathlib import Path
 
-from src.campaign.loader import Campaign, load_campaigns
+import pytest
 
+from src.campaign.loader import Campaign, load_campaigns
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers

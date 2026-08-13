@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
@@ -524,7 +523,6 @@ def _split_scenes(raw_book: str) -> tuple[list[str], list[str]]:
 
 def parse_campaign(campaign: "Campaign") -> ParsedCampaign:  # noqa: F821
     """Parse all files for *campaign* into a :class:`ParsedCampaign`."""
-    from src.campaign.loader import Campaign  # local import avoids any future circular deps
 
     summary = campaign.readme_path.read_text(encoding="utf-8")
     character = parse_character(campaign.character_path.read_text(encoding="utf-8"))

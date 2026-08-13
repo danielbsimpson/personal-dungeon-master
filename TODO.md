@@ -4,6 +4,35 @@ A phased development plan for building the Personal Dungeon Master system. Tasks
 
 ---
 
+## Current Status (2026-08)
+
+> **The authoritative, up-to-date roadmap is the Build Status table in [README.md](README.md).** The
+> checklists below are retained as a historical implementation record.
+
+- **302 tests passing.**
+- **Phases 1–14 are implemented**, including the web interface (Phase 12), the RAG pipeline
+  (Phases A–I: semantic chunking, contextual headers, hierarchical index, segment extraction,
+  BM25 + RRF fusion, contextual compression, adaptive retrieval, RAPTOR, MemoRAG), the DM
+  personality system, streaming output, two-phase player-driven dice, and the voice interface (Phase 14).
+- **Backend rename:** the local provider is now **llama.cpp** (`LLM_PROVIDER=llamacpp`,
+  `LLAMACPP_BASE_URL`), implemented in `src/llm/llamacpp_provider.py`. It targets any
+  OpenAI-compatible server (llama.cpp, LM Studio, or Ollama). References to "Ollama",
+  `OLLAMA_BASE_URL`, and `ollama_provider.py` below are historical — the design (OpenAI-compatible
+  `/v1` endpoints) is unchanged; only the default backend name differs.
+
+### Genuine remaining gaps
+- [x] LLM retry/backoff on transient provider errors (Phase 6) — exponential backoff in
+      `LlamaCppProvider` (`llm_max_retries`, `llm_backoff_base`).
+- [x] Scripted CLI end-to-end smoke test — `tests/test_e2e_cli.py` drives `run_session` with a
+      fake LLM and faked graph backend (no live server needed).
+- [x] Continuous integration — `.github/workflows/ci.yml` runs `ruff` + `pytest` on push/PR; ruff
+      config lives in `pyproject.toml`.
+- [ ] Server-side campaign image serving + `scene_image` events, and per-personality avatar
+      portraits (Phase 13 — the procedural Three.js avatar is already in place).
+- [ ] Phases 15–17: multi-character/party support, campaign authoring tooling, external cloud LLM providers.
+
+---
+
 ## Phase 1 — Project Scaffolding
 
 Get the repository structure, tooling, and configuration in place before writing any logic.

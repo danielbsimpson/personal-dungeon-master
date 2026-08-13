@@ -7,8 +7,13 @@ from random import Random
 import pytest
 
 from src.dice.die import Die, RollRequest, RollResult
-from src.dice.roller import format_result, parse_roll_tags, placeholder_rolls, roll, substitute_rolls
-
+from src.dice.roller import (
+    format_result,
+    parse_roll_tags,
+    placeholder_rolls,
+    roll,
+    substitute_rolls,
+)
 
 # ---------------------------------------------------------------------------
 # Die enum

@@ -15,21 +15,21 @@ Runs **entirely locally** — no API keys, no cloud calls, no data leaving your 
 | 3 | Campaign loading, parsing, and selection | ✅ Complete (52 tests) |
 | 4 | Rules system — loader, reference, NarrativeState | ✅ Complete (25 tests) |
 | 5 | Memory graph — Graphiti + Kuzu | ✅ Complete (8 tests) |
-| 5a | RAG pipeline — semantic chunking, contextual headers, hierarchical index, relevant segment extraction | ✅ Complete (23 tests) |
-| 6 | DM agent — context builder, spoiler guard | ✅ Complete (50 tests) |
-| 7 | Dice engine — `Die` enum, `RollRequest`/`RollResult`, `roll()`, tag parsing, substitution | ✅ Complete (31 tests) |
+| 5a | RAG pipeline (A–I) — semantic chunking, contextual headers, hierarchical index, relevant segment extraction, BM25 + RRF fusion, contextual compression, adaptive retrieval, RAPTOR, MemoRAG | ✅ Complete (77 tests) |
+| 6 | DM agent — context builder, spoiler guard, two-phase dice resolution | ✅ Complete (56 tests) |
+| 7 | Dice engine — `Die` enum, `RollRequest`/`RollResult`, `roll()`, tag parsing, substitution | ✅ Complete (42 tests) |
 | 8 | CLI text interface (`src/interface/cli.py`) and main entry point (`src/main.py`) | ✅ Complete |
 | 9 | Polish & reliability — CLI flags, token counting, context window budget, logging | ✅ Complete |
 | 10 | Streaming word-by-word output and player interrupt | ✅ Complete |
 | 11 | DM personality system — six named personalities | ✅ Complete |
-| 12 | Web interface (FastAPI + WebSocket streaming) | 🔲 Not started |
-| 13 | DM avatar and campaign image display window | 🔲 Not started |
-| 14 | Voice interface — speech-to-text and text-to-speech | 🔲 Not started |
+| 12 | Web interface (FastAPI + WebSocket streaming) | ✅ Complete (18 tests) |
+| 13 | DM avatar and campaign image display window | 🚧 Partial — procedural Three.js avatar renders in the web UI; server-side campaign image serving is not yet wired |
+| 14 | Voice interface — speech-to-text and text-to-speech | ✅ Complete (14 tests) |
 | 15 | Multi-character & party support | 🔲 Not started |
 | 16 | Campaign authoring tooling | 🔲 Not started |
 | 17 | External LLM provider support (OpenAI, Anthropic, Gemini, etc.) | 🔲 Not started |
 
-**199 tests passing** across Phases 1–8 and the RAG pipeline. Phase 8 is covered by manual end-to-end testing (no unit tests).
+**302 tests passing** across the LLM provider, campaign pipeline, full RAG stack (chunking, fusion, compression, RAPTOR, MemoRAG), memory, dice, DM agent, personalities, and the web and voice interfaces. The CLI entry point (Phase 8) is additionally covered by manual end-to-end testing.
 
 ---
 
@@ -83,15 +83,15 @@ The system runs entirely locally via [llama.cpp](https://github.com/ggerganov/ll
 - **Rules-accurate adjudication** — when a player attempts an action, the DM applies the correct 5e mechanics (attack rolls, saving throws, skill checks, spell effects) without the player needing to look anything up
 - **Integrated dice engine** — the DM rolls all dice using a Python RNG engine with cryptographically seeded randomness; every attack roll, damage roll, saving throw, and skill check uses the correct die type (d4, d6, d8, d10, d12, d20, d100) with appropriate modifiers applied automatically
 - **Transparent dice results** — every roll is displayed to the player in the terminal before the DM narrates the outcome, showing the die type, raw roll, modifier, and total
+- **Fusion retrieval (BM25 + semantic)** — the RAG pipeline merges BM25 keyword search with embedding similarity via Reciprocal Rank Fusion for improved recall on entity names and specific terms
+- **Contextual compression** — LLM-assisted passage compression trims retrieved chunks to only the sentences relevant to the current query, reducing context window usage
+- **RAPTOR & MemoRAG memory** — a RAPTOR tree summarises player-history episodes hierarchically, and MemoRAG generates end-of-session clues to steer retrieval across long campaigns
+- **Web interface** — a browser-based chat interface served locally via FastAPI; streams DM output word-by-word via WebSocket and renders a procedural Three.js DM avatar coloured per personality
+- **Voice interface** — speak your actions to the DM via speech-to-text and hear the DM narrate back via streaming text-to-speech with sentence-synchronised on-screen text
 
 ### Planned
-- **Fusion retrieval (BM25 + semantic)** — extend the RAG pipeline with BM25 keyword search merged via Reciprocal Rank Fusion for improved recall on entity names and specific terms
-- **Contextual compression** — LLM-assisted passage compression to trim retrieved chunks to only the sentences relevant to the current query, reducing context window usage
-- **Web interface** — a browser-based chat interface served locally via FastAPI; streams DM output word-by-word via WebSocket, displays the DM avatar, and shows campaign scene images in a visual panel
-- **DM avatar** — a distinct character portrait for each DM personality, displayed prominently in the web interface sidebar
-- **Campaign image display** — a visual panel in the web interface that automatically surfaces images from the campaign's `images/` directory when the DM narrates a matching location or scene
-- **Voice input** — speak your actions to the DM using speech-to-text
-- **Voice output** — the DM narrates back using text-to-speech with a consistent voice persona
+- **Campaign image display** — a visual panel in the web interface that automatically surfaces images from the campaign's `images/` directory when the DM narrates a matching location or scene (avatar sidebar is already in place; server-side image serving is the remaining piece)
+- **Per-personality avatar portraits** — replace the procedural avatar with a distinct character portrait for each DM personality
 - **Save & resume** — save the exact state of an adventure and resume from any point
 - **Multiple players** — support for a party of characters in a single campaign
 - **Custom campaign creation** — tooling to help author new campaigns in the required format

@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from src.campaign.chunker import CampaignChunk
 
-
 HEADER_TEMPLATE = "[{act} | {scene}]\n"
 
 

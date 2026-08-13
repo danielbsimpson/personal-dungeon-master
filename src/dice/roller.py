@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import re
 import secrets
-
 from random import Random
 
 from src.dice.die import Die, RollRequest, RollResult

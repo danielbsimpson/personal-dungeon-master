@@ -1,12 +1,12 @@
 """Tests for the rules loader and reference system (Phase 4)."""
 
-import pytest
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
+
+import pytest
 
 from src.rules.loader import RulesReference, load_rules
 from src.rules.reference import NarrativeState, get_all_rules, get_relevant_rules
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Minimal Settings stub — mirrors the fields load_rules reads

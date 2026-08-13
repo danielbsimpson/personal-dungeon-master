@@ -4,9 +4,6 @@ and Phase G (adaptive retrieval config)."""
 
 from __future__ import annotations
 
-import asyncio
-from typing import Awaitable, Callable
-
 import numpy as np
 import pytest
 
@@ -19,7 +16,6 @@ from src.campaign.index import CampaignIndex
 from src.campaign.segment_extractor import extract_segments
 from src.dm.retrieval_config import RetrievalConfig, get_retrieval_config
 from src.rules.reference import NarrativeState
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Mock helpers
@@ -229,7 +225,6 @@ def _make_chunks_with_embeddings(n: int = 8):
     """Return (chunks, embeddings) where adjacent chunks share a similar direction."""
     chunks = []
     embeddings = []
-    rng = np.random.default_rng(42)
     for i in range(n):
         # Make adjacent chunks similar by using a slowly-rotating vector
         angle = i * 0.1

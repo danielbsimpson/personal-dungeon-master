@@ -383,7 +383,7 @@ If the player found a genuinely superior answer to one of the Archivist's riddle
 
 ### Anansi (If Combat Is Forced)
 
-Anansi does not fight. On the first attack, he vanishes to the ceiling. He waits. If attacked again, the tasks reset from the beginning and he reappears at the spirit market entrance — with the bargain still open, and his amusement somewhat diminished. If attacked a third time, he disappears. The spirit market is empty. The passage closes. The player emerges beneath the tree with nothing. Kofi is still on his bench. He says: *"He gets bored of the ones who only know one answer to every question."* A full stat block for Anansi is provided in creatures.md if the DM requires it.
+Anansi does not fight. On the first attack, he vanishes to the ceiling. He waits. If attacked again, the tasks reset from the beginning and he reappears at the spirit market entrance — with the bargain still open, and his amusement somewhat diminished. If attacked a third time, he disappears. The spirit market is empty. The passage closes. The player emerges beneath the tree with nothing. Kofi is still on his bench. He says: *"He gets bored of the ones who only know one answer to every question."* A full stat block for Anansi is provided in creature.md if the DM requires it.
 
 ---
 
