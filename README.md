@@ -14,11 +14,11 @@ Runs **entirely locally** — no API keys, no cloud calls, no data leaving your 
 |---|---|---|
 | 1 | Project scaffolding, rules files, example campaign | ✅ Complete |
 | 2 | llama.cpp LLM provider, model picker, retry/backoff | ✅ Complete (14 tests) |
-| 3 | Campaign loading, parsing, and selection | ✅ Complete (52 tests) |
+| 3 | Campaign loading, parsing, and selection | ✅ Complete (61 tests) |
 | 4 | Rules system — loader, reference, NarrativeState | ✅ Complete (25 tests) |
 | 5 | Memory graph — Graphiti + Kuzu | ✅ Complete (8 tests) |
 | 5a | RAG pipeline (A–I) — semantic chunking, contextual headers, hierarchical index, relevant segment extraction, BM25 + RRF fusion, contextual compression, adaptive retrieval, RAPTOR, MemoRAG | ✅ Complete (77 tests) |
-| 6 | DM agent — context builder, spoiler guard, two-phase dice resolution | ✅ Complete (56 tests) |
+| 6 | DM agent — context builder, spoiler guard, two-phase dice resolution | ✅ Complete (63 tests) |
 | 7 | Dice engine — `Die` enum, `RollRequest`/`RollResult`, `roll()`, tag parsing, substitution | ✅ Complete (42 tests) |
 | 8 | CLI text interface (`src/interface/cli.py`) and main entry point (`src/main.py`) | ✅ Complete (1 e2e test) |
 | 9 | Polish & reliability — CLI flags, token counting, context window budget, logging | ✅ Complete |
@@ -27,11 +27,11 @@ Runs **entirely locally** — no API keys, no cloud calls, no data leaving your 
 | 12 | Web interface (FastAPI + WebSocket streaming) | ✅ Complete (18 tests) |
 | 13 | DM avatar and campaign image display window | 🚧 Partial — procedural Three.js avatar renders in the web UI; server-side campaign image serving is not yet wired |
 | 14 | Voice interface — speech-to-text and text-to-speech | ✅ Complete (14 tests) |
-| 15 | Multi-character & party support | 🔲 Not started |
+| 15 | Multi-character & party support | ✅ Complete (9 CLI + party parser/DM/memory tests) |
 | 16 | Campaign authoring tooling | ⏸️ On hold — moved to [campaign-creation-tool](https://github.com/danielbsimpson/campaign-creation-tool) |
 | 17 | External LLM provider support (OpenAI, Anthropic, Gemini, etc.) | 🔲 Not started |
 
-**307 tests passing** across the LLM provider (including retry/backoff), campaign pipeline, full RAG stack (chunking, fusion, compression, RAPTOR, MemoRAG), memory, dice, DM agent, personalities, the web and voice interfaces, and a scripted CLI end-to-end smoke test. Continuous integration runs `ruff` (lint) and `pytest` on every push and pull request via [GitHub Actions](.github/workflows/ci.yml) against Python 3.11 and 3.12.
+**331 tests passing** across the LLM provider (including retry/backoff), campaign pipeline (including multi-character party parsing), full RAG stack (chunking, fusion, compression, RAPTOR, MemoRAG), memory, dice, DM agent (including party turn attribution), personalities, the web and voice interfaces, CLI speaker parsing, and a scripted CLI end-to-end smoke test. Continuous integration runs `ruff` (lint) and `pytest` on every push and pull request via [GitHub Actions](.github/workflows/ci.yml) against Python 3.11 and 3.12.
 
 ---
 
@@ -169,6 +169,7 @@ personal-dungeon-master/
 │   ├── test_rules.py
 │   ├── test_dice.py
 │   ├── test_dm.py
+│   ├── test_cli.py
 │   ├── test_llm.py
 │   └── test_chunker.py
 ├── .env.example                   # Template for API keys and environment variables
@@ -217,6 +218,44 @@ Full character details for the player character(s). This includes stats, class, 
 - Shield
 ...
 ```
+
+#### Multiple characters (party)
+
+`character.md` also supports a **party** of several characters. Give each
+member its own top-level `#` heading — the heading text is used as that
+character's name:
+
+```markdown
+# Aldric Stoneforge
+
+## Character Overview
+| Field | Value |
+|---|---|
+| Class | Fighter |
+| Level | 3 |
+
+## Core Stats
+| Stat | Score | Modifier |
+|---|---|---|
+| Strength | 16 | +3 |
+
+# Mira Coldstone
+
+## Character Overview
+| Field | Value |
+|---|---|
+| Class | Wizard |
+| Level | 3 |
+```
+
+A file with **fewer than two** `#` headings is treated as a single character
+(a lone `#` is read as a file title and the name comes from the first `##`
+heading), so existing single-character campaigns are unchanged.
+
+In multi-character sessions, the first party member acts by default. Switch the
+active character with `/party <name|number>`, or attribute a single action
+inline by prefixing your input with `Name: ` (e.g. `Mira: I cast fireball`).
+Use `/party` on its own to list the party and see who is active.
 
 ### `creature.md` — Bestiary
 A catalogue of all creatures (enemies, beasts, and key NPCs) the player may encounter. Each entry includes stat blocks, abilities, and flavor text the DM can use for narration.

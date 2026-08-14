@@ -7,6 +7,8 @@ from src.campaign.parser import (
     ParsedCampaign,
     _split_scenes,
     parse_campaign,
+    parse_characters,
+    split_party,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -217,3 +219,92 @@ class TestParseCampaignIntegration:
 
     def test_returns_parsed_campaign_type(self, parsed):
         assert isinstance(parsed, ParsedCampaign)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-character / party support (Phase 15)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_PARTY_MD = """# Aldric
+
+Aldric is a stalwart fighter.
+
+## Character Overview
+
+| Field | Value |
+| --- | --- |
+| Class | Fighter |
+| Level | 3 |
+| Hit Points | 28 |
+| Armor Class | 18 |
+
+## Core Stats
+
+| Stat | Score | Modifier |
+| --- | --- | --- |
+| Strength | 16 | +3 |
+
+# Mira
+
+Mira is a cunning wizard.
+
+## Character Overview
+
+| Field | Value |
+| --- | --- |
+| Class | Wizard |
+| Level | 3 |
+| Hit Points | 18 |
+| Armor Class | 12 |
+
+## Core Stats
+
+| Stat | Score | Modifier |
+| --- | --- | --- |
+| Intelligence | 17 | +3 |
+"""
+
+
+class TestSplitParty:
+    def test_single_character_file_is_one_block(self, example_campaign):
+        markdown = example_campaign.character_path.read_text(encoding="utf-8")
+        blocks = split_party(markdown)
+        assert len(blocks) == 1
+        assert blocks[0] == markdown
+
+    def test_two_h1_headings_split_into_two_blocks(self):
+        blocks = split_party(_PARTY_MD)
+        assert len(blocks) == 2
+        assert blocks[0].startswith("# Aldric")
+        assert blocks[1].startswith("# Mira")
+
+    def test_no_heading_is_single_block(self):
+        assert split_party("Just some text, no headings.") == ["Just some text, no headings."]
+
+
+class TestParseCharacters:
+    def test_single_character_matches_parse_character(self, example_campaign, parsed):
+        markdown = example_campaign.character_path.read_text(encoding="utf-8")
+        chars = parse_characters(markdown)
+        assert len(chars) == 1
+        assert chars[0].name == parsed.character.name == "Torben Ashford"
+
+    def test_party_names_come_from_h1(self):
+        chars = parse_characters(_PARTY_MD)
+        assert [c.name for c in chars] == ["Aldric", "Mira"]
+
+    def test_party_stats_parsed_per_member(self):
+        chars = parse_characters(_PARTY_MD)
+        aldric, mira = chars
+        assert aldric.character_class == "Fighter"
+        assert aldric.hit_points == 28
+        assert mira.character_class == "Wizard"
+        assert mira.hit_points == 18
+
+
+class TestParsedCampaignAccessor:
+    def test_character_property_returns_first_member(self, parsed):
+        assert parsed.character is parsed.characters[0]
+
+    def test_characters_list_populated(self, parsed):
+        assert len(parsed.characters) == 1

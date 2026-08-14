@@ -23,7 +23,7 @@ import logging
 import threading
 from typing import Optional
 
-from src.campaign.parser import ParsedCampaign
+from src.campaign.parser import Character, ParsedCampaign
 from src.config import Settings
 from src.config import settings as _default_settings
 from src.dice.roller import parse_roll_tags, placeholder_rolls, roll, substitute_rolls
@@ -83,11 +83,13 @@ class DungeonMaster:
         self._turn: int = 0
         self._state: NarrativeState = NarrativeState.EXPLORATION
         self._last_roll_results: list = []
+        self._active_character_index: int = 0
         # Ephemeral context cached between first_pass() and respond_with_rolls().
         self._pending_player_input: str | None = None
         self._pending_first_response: str | None = None
         self._pending_system_prompt: str | None = None
         self._pending_session_msgs: list | None = None
+        self._pending_speaker: str | None = None
 
     # ------------------------------------------------------------------
     # Token budget helpers
@@ -201,7 +203,7 @@ class DungeonMaster:
         await self._memory.record_turn("(campaign start)", response, self._turn)
         return response
 
-    async def respond(self, player_input: str) -> str:
+    async def respond(self, player_input: str, speaker: str | None = None) -> str:
         """
         Generate a DM response to *player_input*.
 
@@ -214,24 +216,28 @@ class DungeonMaster:
         ----------
         player_input:
             The player's raw input text for this turn.
+        speaker:
+            Optional name of the acting party member (for attribution).
 
         Returns
         -------
         str
             The DM's narrated response.
         """
-        first_response, roll_requests = await self.first_pass(player_input)
+        first_response, roll_requests = await self.first_pass(player_input, speaker)
 
         if roll_requests:
             # Auto-roll all requested dice and narrate via the second pass.
             auto_results = [roll(req) for req in roll_requests]
-            return await self.respond_with_rolls(player_input, auto_results)
+            return await self.respond_with_rolls(player_input, auto_results, speaker)
 
         # No rolls needed — commit the first pass directly.
-        await self.finalize_no_roll_turn(player_input, first_response)
+        await self.finalize_no_roll_turn(player_input, first_response, speaker)
         return first_response
 
-    async def first_pass(self, player_input: str) -> tuple[str, list]:
+    async def first_pass(
+        self, player_input: str, speaker: str | None = None
+    ) -> tuple[str, list]:
         """
         Execute the first LLM call and detect any dice roll requests.
 
@@ -270,7 +276,7 @@ class DungeonMaster:
         messages = (
             [{"role": "system", "content": system_prompt}]
             + session_msgs
-            + [{"role": "user", "content": player_input}]
+            + [{"role": "user", "content": self._attribute(player_input, speaker)}]
         )
 
         first_response = self._llm.complete(
@@ -284,11 +290,12 @@ class DungeonMaster:
         self._pending_first_response = first_response
         self._pending_system_prompt = system_prompt
         self._pending_session_msgs = session_msgs
+        self._pending_speaker = speaker
 
         return first_response, parse_roll_tags(first_response)
 
     async def finalize_no_roll_turn(
-        self, player_input: str, first_response: str
+        self, player_input: str, first_response: str, speaker: str | None = None
     ) -> None:
         """
         Commit a turn that contained no dice rolls.
@@ -310,7 +317,7 @@ class DungeonMaster:
 
         self._last_roll_results = []
         self._turn += 1
-        await self._memory.record_turn(player_input, first_response, self._turn)
+        await self._memory.record_turn(player_input, first_response, self._turn, speaker)
         self._maybe_advance_progress(first_response)
 
         if (
@@ -324,7 +331,7 @@ class DungeonMaster:
                 log.warning("RAPTOR background rebuild failed: %s", exc)
 
     async def respond_with_rolls(
-        self, player_input: str, roll_results: list
+        self, player_input: str, roll_results: list, speaker: str | None = None
     ) -> str:
         """
         Complete a two-phase turn by narrating the outcomes of the dice rolls.
@@ -351,15 +358,18 @@ class DungeonMaster:
         system_prompt = self._pending_system_prompt
         session_msgs = self._pending_session_msgs or []
         first_response = self._pending_first_response or ""
+        if speaker is None:
+            speaker = self._pending_speaker
 
         # Clear pending state.
         self._pending_player_input = None
         self._pending_first_response = None
         self._pending_system_prompt = None
         self._pending_session_msgs = None
+        self._pending_speaker = None
 
         dm_response = await self._second_pass(
-            player_input, roll_results, first_response, system_prompt, session_msgs
+            player_input, roll_results, first_response, system_prompt, session_msgs, speaker
         )
 
         # Step 7: append a roll summary to the stored response so future
@@ -371,7 +381,7 @@ class DungeonMaster:
 
         self._last_roll_results = list(roll_results)
         self._turn += 1
-        await self._memory.record_turn(player_input, recorded_response, self._turn)
+        await self._memory.record_turn(player_input, recorded_response, self._turn, speaker)
         self._maybe_advance_progress(dm_response)
 
         if (
@@ -393,6 +403,7 @@ class DungeonMaster:
         first_response: str,
         system_prompt: str | None,
         session_msgs: list,
+        speaker: str | None = None,
     ) -> str:
         """
         Execute the second LLM call, narrating the outcome of the dice rolls.
@@ -445,7 +456,7 @@ class DungeonMaster:
         messages = (
             [{"role": "system", "content": system_prompt or ""}]
             + session_msgs
-            + [{"role": "user", "content": player_input}]
+            + [{"role": "user", "content": self._attribute(player_input, speaker)}]
             + [{"role": "assistant", "content": placeholdered}]
             + [{"role": "user", "content": roll_message}]
         )
@@ -543,6 +554,35 @@ class DungeonMaster:
         return self._campaign
 
     @property
+    def active_character_index(self) -> int:
+        """Index into :attr:`campaign.characters` of the acting party member."""
+        return self._active_character_index
+
+    @property
+    def active_character(self) -> "Character":
+        """The party member currently taking actions."""
+        return self._campaign.characters[self._active_character_index]
+
+    def set_active_character(self, index: int) -> None:
+        """
+        Choose which party member is acting by list index.
+
+        Raises
+        ------
+        IndexError
+            If *index* is outside the party range.
+        """
+        party = self._campaign.characters
+        if not 0 <= index < len(party):
+            raise IndexError(f"No party member at index {index} (party size {len(party)}).")
+        self._active_character_index = index
+
+    @staticmethod
+    def _attribute(text: str, speaker: str | None) -> str:
+        """Prefix *text* with ``[speaker]`` attribution when a speaker is given."""
+        return f"[{speaker}] {text}" if speaker else text
+
+    @property
     def rules(self) -> "RulesReference":
         """The loaded rules reference for this session."""
         return self._rules
@@ -601,6 +641,7 @@ class DungeonMaster:
         self,
         player_input: str,
         cancel_event: threading.Event | None = None,
+        speaker: str | None = None,
     ):  # -> AsyncGenerator[str, None]
         """
         Async generator that streams the DM's response token by token.
@@ -691,5 +732,5 @@ class DungeonMaster:
             full_response = "".join(response_parts)
             self._last_roll_results = roll_results
             self._turn += 1
-            await self._memory.record_turn(player_input, full_response, self._turn)
+            await self._memory.record_turn(player_input, full_response, self._turn, speaker)
             self._maybe_advance_progress(full_response)

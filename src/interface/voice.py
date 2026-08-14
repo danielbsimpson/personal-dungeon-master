@@ -462,7 +462,7 @@ async def run_voice_session(
     from src.interface import cli  # noqa: PLC0415
 
     rules = rules or dm.rules
-    character = dm.campaign.character
+    characters = dm.campaign.characters
 
     console.print()
     console.print(
@@ -508,7 +508,7 @@ async def run_voice_session(
                 cli._cmd_help()
                 continue
             if lower == "/status":
-                cli._cmd_status(character)
+                cli._cmd_status(characters, dm.active_character_index)
                 continue
             if lower == "/journal":
                 with console.status("[magenta]Querying knowledge graph…[/magenta]", spinner="dots"):

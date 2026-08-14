@@ -10,6 +10,7 @@ Special commands
 /quit, /exit    Save and exit gracefully
 /journal        Render a human-readable view of the knowledge graph
 /status         Display current character stats and inventory
+/party          List party members or switch the active one (/party <name>)
 /save           Explicitly trigger a session save
 /reset          Wipe the short-term session window (graph preserved)
 /fullreset      Wipe session window AND knowledge graph
@@ -19,6 +20,7 @@ Special commands
 
 from __future__ import annotations
 
+import re
 import sys
 import threading
 from typing import Optional
@@ -57,6 +59,7 @@ _COMMANDS: dict[str, str] = {
     "/quit | /exit": "Save and exit gracefully",
     "/journal": "Show knowledge graph entities and relationships",
     "/status": "Show character stats and inventory",
+    "/party": "List party members or switch active  e.g. /party Aldric  /party 2",
     "/save": "Explicitly save the session state",
     "/reset": "Wipe the session window (graph preserved)",
     "/fullreset": "Wipe session window AND knowledge graph (restart campaign)",
@@ -153,7 +156,9 @@ def _make_interrupt_watcher() -> tuple[threading.Event, threading.Thread]:
     return cancel_event, thread
 
 
-async def _stream_dm_response(dm: DungeonMaster, player_input: str) -> bool:
+async def _stream_dm_response(
+    dm: DungeonMaster, player_input: str, speaker: str | None = None
+) -> bool:
     """
     Stream the DM's response to the terminal using :class:`rich.live.Live`.
 
@@ -188,7 +193,9 @@ async def _stream_dm_response(dm: DungeonMaster, player_input: str) -> bool:
         refresh_per_second=12,
         vertical_overflow="visible",
     ) as live:
-        async for chunk in dm.respond_stream(player_input, cancel_event=cancel_event):
+        async for chunk in dm.respond_stream(
+            player_input, cancel_event=cancel_event, speaker=speaker
+        ):
             if chunk == "\n\n*[interrupted]*":
                 interrupted = True
             accumulated += chunk
@@ -292,7 +299,7 @@ def prompt_player_rolls(roll_requests: list[RollRequest]) -> list[RollResult]:
 
 
 async def _stream_dm_response_two_phase(
-    dm: DungeonMaster, player_input: str
+    dm: DungeonMaster, player_input: str, speaker: str | None = None
 ) -> bool:
     """
     Two-phase DM response: first-pass LLM call, player roll prompts, then
@@ -315,11 +322,11 @@ async def _stream_dm_response_two_phase(
         Always ``False`` (reserved for future streaming interrupt support).
     """
     with console.status("[green]The DM considers your action…[/green]", spinner="dots"):
-        first_response, roll_requests = await dm.first_pass(player_input)
+        first_response, roll_requests = await dm.first_pass(player_input, speaker)
 
     if not roll_requests:
         # No dice needed — commit the turn and display the response directly.
-        await dm.finalize_no_roll_turn(player_input, first_response)
+        await dm.finalize_no_roll_turn(player_input, first_response, speaker)
         print_dm_response(first_response)
         return False
 
@@ -338,7 +345,7 @@ async def _stream_dm_response_two_phase(
     with console.status(
         "[green]The DM narrates the outcome…[/green]", spinner="dots"
     ):
-        final_response = await dm.respond_with_rolls(player_input, roll_results)
+        final_response = await dm.respond_with_rolls(player_input, roll_results, speaker)
 
     print_dm_response(final_response)
     return False
@@ -406,7 +413,7 @@ def _cmd_help() -> None:
     console.print()
 
 
-def _cmd_status(character: Character) -> None:
+def _render_character_status(character: Character, *, active: bool = False) -> None:
     # Ability scores table
     scores = character.ability_scores
     score_table = Table(box=box.MINIMAL_DOUBLE_HEAD, show_header=True, header_style="bold")
@@ -440,12 +447,16 @@ def _cmd_status(character: Character) -> None:
         equipment_lines.append(f"• {name}")
     equip_text = "\n".join(equipment_lines) if equipment_lines else "[dim]None[/dim]"
 
+    title = "[bold cyan]Character Status[/bold cyan]"
+    if active:
+        title += " [bold green](active)[/bold green]"
+
     console.print()
     console.print(
         Panel(
             stats_text,
-            title="[bold cyan]Character Status[/bold cyan]",
-            border_style="cyan",
+            title=title,
+            border_style="green" if active else "cyan",
             padding=(1, 2),
         )
     )
@@ -460,6 +471,83 @@ def _cmd_status(character: Character) -> None:
             padding=(0, 2),
         )
     )
+    console.print()
+
+
+def _cmd_status(characters: list[Character], active_index: int = 0) -> None:
+    party = characters if isinstance(characters, list) else [characters]
+    multi = len(party) > 1
+    for i, character in enumerate(party):
+        _render_character_status(character, active=multi and i == active_index)
+
+
+# Matches a leading ``Name: action`` speaker attribution.
+_SPEAKER_RE = re.compile(r"^\s*(?P<name>[A-Za-z][\w' -]*?)\s*:\s*(?P<action>.+)$", re.DOTALL)
+
+
+def _match_party_member(characters: list[Character], name: str) -> Character | None:
+    """Resolve *name* to a party member (exact, first-name, or prefix match)."""
+    name_l = name.strip().lower()
+    if not name_l:
+        return None
+    for char in characters:
+        if char.name.lower() == name_l:
+            return char
+    for char in characters:
+        first = char.name.split()[0].lower() if char.name else ""
+        if first == name_l or char.name.lower().startswith(name_l):
+            return char
+    return None
+
+
+def parse_speaker(
+    raw: str, characters: list[Character]
+) -> tuple[Character | None, str]:
+    """
+    Detect an optional ``Name: action`` speaker prefix.
+
+    Returns the matched party member and the remaining action text.  When no
+    ``Name:`` prefix is present, or the name does not match a party member,
+    returns ``(None, raw)`` so the caller falls back to the active character.
+    """
+    m = _SPEAKER_RE.match(raw)
+    if not m:
+        return None, raw
+    member = _match_party_member(characters, m.group("name"))
+    if member is None:
+        return None, raw
+    return member, m.group("action").strip()
+
+
+def _cmd_party(dm: DungeonMaster, characters: list[Character], selector: str = "") -> None:
+    """List the party, or switch the active member when *selector* is given."""
+    if selector:
+        target: Character | None = None
+        if selector.isdigit():
+            idx = int(selector) - 1
+            if 0 <= idx < len(characters):
+                target = characters[idx]
+        if target is None:
+            target = _match_party_member(characters, selector)
+        if target is None:
+            console.print(f"[red]No party member matches '{selector}'.[/red]")
+            return
+        dm.set_active_character(characters.index(target))
+        console.print(f"[green]{target.name} is now the active character.[/green]")
+        return
+
+    table = Table(title="Party", box=box.ROUNDED, border_style="cyan", header_style="bold cyan")
+    table.add_column("#", justify="right", style="dim")
+    table.add_column("Name", style="bold white")
+    table.add_column("Class", style="cyan")
+    table.add_column("", style="green")
+    for i, char in enumerate(characters):
+        marker = "◀ active" if i == dm.active_character_index else ""
+        cls = char.character_class + (f" ({char.subclass})" if char.subclass else "")
+        table.add_row(str(i + 1), char.name, f"{cls} L{char.level}", marker)
+    console.print()
+    console.print(table)
+    console.print("[dim]Switch with /party <name|number>, or prefix input with 'Name: …'.[/dim]")
     console.print()
 
 
@@ -640,7 +728,7 @@ async def run_session(
         ``/rules`` command.  Falls back to ``dm.rules`` when not supplied.
     """
     rules = rules or dm.rules
-    character = dm.campaign.character
+    characters = dm.campaign.characters
 
     # Opening narration — show active personality in the banner
     console.print()
@@ -674,7 +762,15 @@ async def run_session(
                 continue
 
             if lower == "/status":
-                _cmd_status(character)
+                _cmd_status(characters, dm.active_character_index)
+                continue
+
+            if lower == "/party":
+                _cmd_party(dm, characters)
+                continue
+
+            if lower.startswith("/party "):
+                _cmd_party(dm, characters, raw[7:].strip())
                 continue
 
             if lower == "/journal":
@@ -726,7 +822,15 @@ async def run_session(
                 continue
 
             # --- Normal player input --------------------------------------
-            await _stream_dm_response_two_phase(dm, raw)
+            multi = len(characters) > 1
+            if multi:
+                speaker_char, action = parse_speaker(raw, characters)
+                if speaker_char is not None:
+                    dm.set_active_character(characters.index(speaker_char))
+                speaker = dm.active_character.name
+            else:
+                action, speaker = raw, None
+            await _stream_dm_response_two_phase(dm, action, speaker)
 
     except KeyboardInterrupt:
         console.print()

@@ -138,6 +138,7 @@ class MemoryManager:
         player_input: str,
         dm_response: str,
         turn: int,
+        speaker: str | None = None,
     ) -> None:
         """
         Persist a completed conversation turn.
@@ -153,11 +154,20 @@ class MemoryManager:
             The final DM narration (after dice substitution).
         turn:
             Monotonically increasing turn counter (used as the episode name).
+        speaker:
+            Optional name of the party member who acted this turn.  When
+            supplied, the persisted player message is attributed as
+            ``[speaker] ...`` and the episode source records the speaker.
         """
         assert self._session is not None, "Call load() before record_turn()"
         assert self._graph is not None, "Call load() before record_turn()"
 
-        self._session.append("user", player_input)
+        stored_input = f"[{speaker}] {player_input}" if speaker else player_input
+        source_description = (
+            f"DM narration (player: {speaker})" if speaker else "DM narration"
+        )
+
+        self._session.append("user", stored_input)
         self._session.append("assistant", dm_response)
         self._episode_texts.append(dm_response)  # Phase H/I accumulation
 
@@ -165,7 +175,7 @@ class MemoryManager:
             await self._graph.add_episode(
                 name=f"turn_{turn}",
                 content=dm_response,
-                source_description="DM narration",
+                source_description=source_description,
                 turn=turn,
                 group_id=self._campaign_name,
             )

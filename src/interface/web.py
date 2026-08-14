@@ -275,7 +275,11 @@ async def handle_command(session_id: str, body: CommandRequest) -> dict:
     cmd = body.command
 
     if cmd == "status":
-        return {"command": "status", "data": _character_to_dict(session.campaign.character)}
+        return {
+            "command": "status",
+            "data": _character_to_dict(session.campaign.character),
+            "party": _party_to_dict(session.campaign.characters),
+        }
 
     if cmd == "journal":
         entities = await session.memory.get_entities()
@@ -496,3 +500,8 @@ def _character_to_dict(char) -> dict:
         },
         "equipment": char.equipment[:10],
     }
+
+
+def _party_to_dict(characters) -> list[dict]:
+    """Serialise every party member for the ``/status`` response."""
+    return [_character_to_dict(char) for char in characters]

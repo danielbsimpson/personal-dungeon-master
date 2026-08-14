@@ -9,7 +9,7 @@ A phased development plan for building the Personal Dungeon Master system. Tasks
 > **The authoritative, up-to-date roadmap is the Build Status table in [README.md](README.md).** The
 > checklists below are retained as a historical implementation record.
 
-- **307 tests passing.**
+- **331 tests passing.**
 - **Phases 1–14 are implemented**, including the web interface (Phase 12), the RAG pipeline
   (Phases A–I: semantic chunking, contextual headers, hierarchical index, segment extraction,
   BM25 + RRF fusion, contextual compression, adaptive retrieval, RAPTOR, MemoRAG), the DM
@@ -29,7 +29,9 @@ A phased development plan for building the Personal Dungeon Master system. Tasks
       config lives in `pyproject.toml`.
 - [ ] Server-side campaign image serving + `scene_image` events, and per-personality avatar
       portraits (Phase 13 — the procedural Three.js avatar is already in place).
-- [ ] Phase 15: multi-character/party support.
+- [x] Phase 15: multi-character/party support — `character.md` accepts one `#` heading per party
+      member; the DM tracks an active character, `/party` lists/switches members, and `Name: `
+      prefixes attribute individual actions (persisted in the session window and graph).
 - [ ] Phase 17: external cloud LLM providers (deferred as far back as possible — local-first is the priority through v1).
 - ⏸️ Phase 16 (campaign authoring tooling) is on hold — split into the dedicated
       [campaign-creation-tool](https://github.com/danielbsimpson/campaign-creation-tool) repository.
@@ -484,10 +486,14 @@ Add speech-to-text and text-to-speech so the player can speak to the DM and hear
 
 Extend the system to support a full party of adventurers.
 
-- [ ] Update `character.md` format to support multiple characters (list of character blocks)
-- [ ] Update `context_builder.py` to include all party member sheets in the system prompt
-- [ ] Update the CLI to let the player specify which character is taking an action (e.g., `Aldric: I search the room`)
-- [ ] Update memory/journal to track individual character events
+- [x] Update `character.md` format to support multiple characters (one `#` heading per member;
+      files with <2 H1 headings stay single-character)
+- [x] Update `context_builder.py` to include all party member sheets in the system prompt
+      (`_format_party`, rendered under `## PARTY`)
+- [x] Update the CLI to let the player specify which character is taking an action (e.g.,
+      `Aldric: I search the room`), plus `/party` to list/switch the active character
+- [x] Update memory/journal to track individual character events (speaker attribution threaded
+      through the DM turn methods and `record_turn`)
 - [ ] Consider: multiplayer mode where different humans control different characters (out of scope for v1)
 
 ---

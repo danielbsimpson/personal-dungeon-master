@@ -31,3 +31,7 @@ htmlcov/
 .vscode/
 .idea/
 *.swp
+
+# Hidden planning documents
+/plan
+plan/*

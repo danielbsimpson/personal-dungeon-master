@@ -164,6 +164,16 @@ def _format_character(char: Character) -> str:
     return "\n".join(lines)
 
 
+def _format_party(characters: list[Character]) -> str:
+    """Format one or more party members into a single block for the system prompt."""
+    if len(characters) == 1:
+        return _format_character(characters[0])
+    return "\n\n".join(
+        f"### Party Member {i} of {len(characters)}\n{_format_character(char)}"
+        for i, char in enumerate(characters, start=1)
+    )
+
+
 def _format_creatures(creatures: list[Creature]) -> str:
     """Format the creature list into a concise reference block."""
     if not creatures:
@@ -246,8 +256,8 @@ async def build_system_prompt(
     # 3. Campaign summary
     summary_section = f"## CAMPAIGN SUMMARY\n\n{campaign.summary.strip()}"
 
-    # 4. Character sheet
-    char_section = f"## PLAYER CHARACTER\n\n{_format_character(campaign.character)}"
+    # 4. Character sheet(s)
+    char_section = f"## PARTY\n\n{_format_party(campaign.characters)}"
 
     # 5. Creature reference
     creatures_section = (

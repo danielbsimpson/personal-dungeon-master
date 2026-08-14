@@ -4,6 +4,8 @@ Campaign parser — turns raw markdown and text files into structured Pydantic m
 Public API
 ----------
 parse_character(markdown: str) -> Character
+parse_characters(markdown: str) -> list[Character]
+split_party(markdown: str) -> list[str]
 parse_creatures(markdown: str) -> list[Creature]
 parse_campaign(campaign: Campaign) -> ParsedCampaign
 """
@@ -182,7 +184,7 @@ class Creature(BaseModel):
 @dataclass
 class ParsedCampaign:
     summary: str
-    character: Character
+    characters: list[Character]  # party order; [0] is the active/primary member
     creatures: list[Creature]
     scenes: list[str]        # each element is one scene's full text (including its header)
     scene_titles: list[str]  # e.g. ["Arrival in Millhaven", ...]
@@ -190,6 +192,11 @@ class ParsedCampaign:
     # Phase A/C: populated by enrich_campaign() after initial parse
     chunks: list["CampaignChunk"] = field(default_factory=list)
     index: "CampaignIndex | None" = None
+
+    @property
+    def character(self) -> Character:
+        """Active/primary party member — backward-compatible single-character accessor."""
+        return self.characters[0]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -334,6 +341,51 @@ def parse_character(markdown: str) -> Character:
         features=features,
         raw_markdown=markdown,
     )
+
+
+# Matches a single top-level H1 heading (``# Name``) but not ``## Section``.
+_H1_HEADING = re.compile(r"^#(?!#)[ \t]+(.+?)\s*$", re.MULTILINE)
+
+
+def split_party(markdown: str) -> list[str]:
+    """
+    Split a ``character.md`` file into one markdown block per party member.
+
+    Party members are delimited by top-level H1 headings (``# Name``).  A file
+    with fewer than two H1 headings is treated as a *single* character: a lone
+    H1 is assumed to be a file title (the name comes from the first ``##``
+    heading), keeping legacy single-character files unchanged.
+    """
+    matches = list(_H1_HEADING.finditer(markdown))
+    if len(matches) < 2:
+        return [markdown]
+    blocks: list[str] = []
+    for i, m in enumerate(matches):
+        start = m.start()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(markdown)
+        blocks.append(markdown[start:end].strip())
+    return blocks
+
+
+def parse_characters(markdown: str) -> list[Character]:
+    """
+    Parse a ``character.md`` file into an ordered list of :class:`Character`.
+
+    Single-character files (fewer than two H1 headings) yield a one-element
+    list identical to :func:`parse_character`.  Multi-character (party) files
+    use each ``# Name`` H1 as the delimiter *and* the character's name.
+    """
+    blocks = split_party(markdown)
+    multi = len(blocks) > 1
+    characters: list[Character] = []
+    for block in blocks:
+        char = parse_character(block)
+        if multi:
+            name_m = _H1_HEADING.match(block)
+            if name_m:
+                char = char.model_copy(update={"name": name_m.group(1).strip()})
+        characters.append(char)
+    return characters
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -525,14 +577,14 @@ def parse_campaign(campaign: "Campaign") -> ParsedCampaign:  # noqa: F821
     """Parse all files for *campaign* into a :class:`ParsedCampaign`."""
 
     summary = campaign.readme_path.read_text(encoding="utf-8")
-    character = parse_character(campaign.character_path.read_text(encoding="utf-8"))
+    characters = parse_characters(campaign.character_path.read_text(encoding="utf-8"))
     creatures = parse_creatures(campaign.creature_path.read_text(encoding="utf-8"))
     raw_book = campaign.book_path.read_text(encoding="utf-8")
     scene_titles, scenes = _split_scenes(raw_book)
 
     return ParsedCampaign(
         summary=summary,
-        character=character,
+        characters=characters,
         creatures=creatures,
         scenes=scenes,
         scene_titles=scene_titles,

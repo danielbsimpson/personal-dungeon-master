@@ -37,7 +37,7 @@ def _make_character() -> Character:
 def _make_campaign() -> ParsedCampaign:
     return ParsedCampaign(
         summary="A brave hero ventures into the Dungeon of Dread.",
-        character=_make_character(),
+        characters=[_make_character()],
         creatures=[
             Creature(name="Goblin", creature_type="Humanoid", flavor_text="Small and cunning.", raw_markdown=""),
         ],
@@ -241,7 +241,7 @@ class TestDungeonMaster:
         dm = self._make_dm(llm_response="A goblin snarls.")
         await dm.respond("I attack!")
         dm._memory.record_turn.assert_called_once_with(
-            "I attack!", "A goblin snarls.", 1
+            "I attack!", "A goblin snarls.", 1, None
         )
 
     async def test_respond_increments_turn_counter(self):
@@ -291,6 +291,68 @@ class TestDungeonMaster:
         messages = dm._llm.complete.call_args[0][0]
         # session messages appear between system prompt and new user message
         assert messages[1] == prior[0]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Party support (Phase 15)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _make_party_campaign() -> ParsedCampaign:
+    base = _make_campaign()
+    aldric = base.character
+    mira = aldric.model_copy(update={"name": "Mira", "character_class": "Wizard"})
+    return ParsedCampaign(
+        summary=base.summary,
+        characters=[aldric, mira],
+        creatures=base.creatures,
+        scenes=base.scenes,
+        scene_titles=base.scene_titles,
+        raw_book=base.raw_book,
+    )
+
+
+class TestPartySupport:
+    def _make_dm(self, llm_response: str = "The party advances.") -> DungeonMaster:
+        llm = MagicMock()
+        llm.complete = MagicMock(return_value=llm_response)
+        return DungeonMaster(llm, _make_party_campaign(), _make_rules(), _make_memory())
+
+    def test_active_character_defaults_to_first(self):
+        dm = self._make_dm()
+        assert dm.active_character_index == 0
+        assert dm.active_character.name == "Aldric"
+
+    def test_set_active_character_switches_member(self):
+        dm = self._make_dm()
+        dm.set_active_character(1)
+        assert dm.active_character.name == "Mira"
+
+    def test_set_active_character_out_of_range_raises(self):
+        dm = self._make_dm()
+        with pytest.raises(IndexError):
+            dm.set_active_character(5)
+
+    async def test_system_prompt_lists_all_party_members(self):
+        dm = self._make_dm()
+        await dm.respond("We look around.")
+        system_prompt = dm._llm.complete.call_args[0][0][0]["content"]
+        assert "## PARTY" in system_prompt
+        assert "Aldric" in system_prompt
+        assert "Mira" in system_prompt
+
+    async def test_speaker_attribution_in_user_message(self):
+        dm = self._make_dm()
+        await dm.respond("I cast a spell.", speaker="Mira")
+        user_msg = dm._llm.complete.call_args[0][0][-1]
+        assert user_msg["content"] == "[Mira] I cast a spell."
+
+    async def test_speaker_forwarded_to_record_turn(self):
+        dm = self._make_dm()
+        await dm.respond("I cast a spell.", speaker="Mira")
+        dm._memory.record_turn.assert_called_once_with(
+            "I cast a spell.", "The party advances.", 1, "Mira"
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -577,7 +639,7 @@ class TestTwoPhaseRolls:
         assert dm._llm.complete.call_count == 1
         assert result == "You find a potion on the shelf."
         dm._memory.record_turn.assert_called_once_with(
-            "I search the room.", "You find a potion on the shelf.", 1
+            "I search the room.", "You find a potion on the shelf.", 1, None
         )
 
     async def test_respond_two_phase_with_rolls(self):
@@ -675,5 +737,5 @@ class TestTwoPhaseRolls:
         assert dm._pending_player_input == "I wait."
         await dm.finalize_no_roll_turn("I wait.", "Nothing happens.")
         assert dm._pending_player_input is None
-        dm._memory.record_turn.assert_called_once_with("I wait.", "Nothing happens.", 1)
+        dm._memory.record_turn.assert_called_once_with("I wait.", "Nothing happens.", 1, None)
 

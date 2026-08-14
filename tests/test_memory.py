@@ -156,6 +156,17 @@ class TestMemoryManagerRecordTurn:
         assert call_kwargs.kwargs["name"] == "turn_1"
         assert call_kwargs.kwargs["content"] == "dm replied this"
 
+    async def test_record_turn_attributes_speaker(self, tmp_path: Path) -> None:
+        """A speaker prefixes the persisted player message and the episode source."""
+        manager, mock_graph = _make_manager(tmp_path)
+
+        await manager.record_turn("I cast fireball", "It explodes.", turn=2, speaker="Mira")
+
+        msgs = manager._session.messages()  # type: ignore[union-attr]
+        assert {"role": "user", "content": "[Mira] I cast fireball"} in msgs
+        source = mock_graph.add_episode.call_args.kwargs["source_description"]
+        assert "Mira" in source
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # get_context
